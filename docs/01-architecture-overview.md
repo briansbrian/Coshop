@@ -1,244 +1,147 @@
 # Architecture Overview
 
-## System Purpose
+## System Architecture
 
-CoShop is a marketplace platform designed to empower Small and Medium-sized Enterprises (SMEs) by providing an integrated online presence. The platform connects SMEs with consumers through business registration, inventory management, and geolocation-based discovery.
+CoShop is a marketplace platform built with a service-oriented architecture that connects SMEs with consumers through geolocation-based discovery, product management, and order processing.
 
-## Core Value Proposition
+### Technology Stack
 
-Unlike traditional e-commerce platforms that cater to large enterprises, CoShop focuses on helping SMEs compete effectively in the digital marketplace while maintaining their unique identity and local presence.
+**Backend:**
+- Node.js with Express.js (RESTful API)
+- PostgreSQL 14+ with PostGIS extension (geospatial data)
+- Redis (caching and session management)
+- JWT for authentication (access + refresh tokens)
 
-## High-Level Architecture
+**Key Libraries:**
+- `bcrypt` - Password hashing
+- `joi` - Request validation
+- `jsonwebtoken` - JWT token generation/verification
+- `axios` - HTTP client for external APIs
+- `pg` - PostgreSQL client
 
-The platform follows a **service-oriented architecture** with clear separation of concerns:
+**External Services:**
+- OpenStreetMap Nominatim (geocoding, free)
+- Google Maps API (geocoding fallback, optional)
+
+### Architecture Layers
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                      Client Layer                            │
-│  (Web Application - React, Mobile-Responsive)                │
-└─────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────┐
-│                   API Gateway / Router                       │
-│  (Express.js - RESTful API with JWT Authentication)          │
-└─────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────┐
-│                    Service Layer                             │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │ Auth Service │  │ SME Service  │  │Product Service│      │
-│  └──────────────┘  └──────────────┘  └──────────────┘      │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │Order Service │  │ Geo Service  │  │Rating Service│      │
-│  └──────────────┘  └──────────────┘  └──────────────┘      │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │ Msg Service  │  │Notif Service │  │Analytics Svc │      │
-│  └──────────────┘  └──────────────┘  └──────────────┘      │
-└─────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────┐
-│                     Data Layer                               │
-│  ┌──────────────────────┐  ┌──────────────────────┐         │
-│  │ PostgreSQL + PostGIS │  │   Redis Cache        │         │
-│  │  (Primary Database)  │  │  (Session/Cache)     │         │
-│  └──────────────────────┘  └──────────────────────┘         │
-│  ┌──────────────────────┐  ┌──────────────────────┐         │
-│  │  File Storage (S3)   │  │  Elasticsearch       │         │
-│  │  (Images/Documents)  │  │  (Product Search)    │         │
-│  └──────────────────────┘  └──────────────────────┘         │
-└─────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────┐
-│                 External Integrations                        │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │   Payment    │  │   Delivery   │  │     Maps     │      │
-│  │ (Stripe/etc) │  │ (Uber/etc)   │  │(OSM/Google)  │      │
-│  └──────────────┘  └──────────────┘  └──────────────┘      │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────┐
+│         Client Layer                │
+│   (Web/Mobile - Not Implemented)    │
+└─────────────────────────────────────┘
+                 ↓
+┌─────────────────────────────────────┐
+│         API Gateway Layer           │
+│      Express.js (Port 5000)         │
+│   - CORS middleware                 │
+│   - JSON body parsing               │
+│   - Error handling                  │
+└─────────────────────────────────────┘
+                 ↓
+┌─────────────────────────────────────┐
+│      Authentication Layer           │
+│   - JWT verification                │
+│   - Role-based access control       │
+│   - Ownership validation            │
+└─────────────────────────────────────┘
+                 ↓
+┌─────────────────────────────────────┐
+│        Service Layer                │
+│   - authService                     │
+│   - businessService                 │
+│   - productService                  │
+└─────────────────────────────────────┘
+                 ↓
+┌─────────────────────────────────────┐
+│         Data Layer                  │
+│   - PostgreSQL (primary data)       │
+│   - PostGIS (geospatial queries)    │
+│   - Redis (caching)                 │
+└─────────────────────────────────────┘
 ```
 
-## Technology Stack
+### Core Design Principles
 
-### Backend
-- **Runtime:** Node.js (ES6+ modules)
-- **Framework:** Express.js
-- **API Design:** RESTful with versioning (`/api/v1/`)
-- **Authentication:** JWT (access + refresh tokens)
-- **Validation:** Joi schema validation
-- **Password Security:** bcrypt hashing
+**1. Service Isolation**
+Each service module handles a specific domain (auth, business, products) with clear boundaries and responsibilities.
 
-### Database & Storage
-- **Primary Database:** PostgreSQL 14+
-- **Geospatial Extension:** PostGIS (for location-based queries)
-- **Caching:** Redis (planned for performance optimization)
-- **Search Engine:** Elasticsearch (planned for product search)
-- **File Storage:** Local filesystem (MVP), AWS S3 (production)
+**2. Stateless Authentication**
+JWT tokens enable stateless authentication. Access tokens expire in 15 minutes, refresh tokens in 7 days.
 
-### Frontend (Planned)
-- **Framework:** React.js with Vite
-- **Styling:** Tailwind CSS
-- **State Management:** Zustand
-- **HTTP Client:** Axios
-- **Mapping:** Leaflet or Google Maps JavaScript API
-- **Real-time:** WebSocket for messaging
+**3. Geospatial-First**
+PostGIS extension enables efficient location-based queries using native geographic types and spatial indexes.
 
-### External Services
-- **Geocoding:** OpenStreetMap Nominatim (primary), Google Maps API (fallback)
-- **Payment:** Stripe, PayPal, M-Pesa (planned)
-- **Delivery:** Uber API, Pick Up Mtaani API (planned)
+**4. Validation at Entry**
+Joi schemas validate all incoming data before processing, ensuring data integrity.
 
-## Design Principles
+**5. Caching Strategy**
+Redis caches frequently accessed data (product searches) with appropriate TTLs to reduce database load.
 
-### 1. Service Isolation
-Each service is responsible for a specific domain:
-- **Authentication Service:** User management and security
-- **Business Service:** SME profile and verification
-- **Product Service:** Inventory and catalog management
-- **Order Service:** Transaction processing
-- **Geolocation Service:** Spatial queries and discovery
+**6. Error Consistency**
+All errors follow a standardized format with status codes, error codes, and timestamps.
 
-### 2. Data Integrity
-- Foreign key constraints ensure referential integrity
-- Transactions (BEGIN/COMMIT/ROLLBACK) for multi-step operations
-- Cascading deletes for dependent records
-- Generated columns for computed fields (e.g., `in_stock`)
+### Request Flow
 
-### 3. Security First
-- Password hashing with bcrypt (10 salt rounds)
-- JWT tokens with short expiration (15 minutes access, 7 days refresh)
-- Role-based access control (RBAC) middleware
-- Input validation on all endpoints
-- SQL injection prevention through parameterized queries
+**Authenticated Request:**
+1. Client sends request with `Authorization: Bearer <token>` header
+2. `authenticate` middleware verifies JWT token
+3. User object attached to `req.user`
+4. RBAC middleware checks user role/permissions
+5. Route handler calls service function
+6. Service validates input with Joi
+7. Service executes business logic and database queries
+8. Response returned to client
 
-### 4. Performance Optimization
-- Database indexes on frequently queried fields
-- Spatial indexes (GIST) for geolocation queries
-- Redis caching for expensive operations (planned)
-- Pagination for large result sets (planned)
-- CDN for static assets (planned)
+**Public Request:**
+1. Client sends request (no auth header)
+2. Route handler calls service function directly
+3. Service validates input and executes logic
+4. Response returned to client
 
-### 5. Error Handling
-- Consistent error response format across all endpoints
-- Typed error objects with status codes
-- Graceful degradation for external service failures
-- Detailed error logging for debugging
+### Database Connection Management
 
-### 6. Scalability Considerations
-- Stateless API design (JWT tokens, no server sessions)
-- Horizontal scaling capability for application servers
-- Database read replicas for query distribution (planned)
-- Message queue for async operations (planned)
-- Microservices-ready architecture
+- Connection pool managed by `pg` library
+- Pool configuration in `backend/src/config/database.js`
+- Transactions used for multi-step operations (user registration with business creation)
+- Clients acquired from pool and released in finally blocks
 
-## API Design Patterns
+### Current Implementation Status
 
-### Versioning
-All API endpoints are versioned: `/api/v1/resource`
+**✅ Completed:**
+- Database schema with PostGIS support
+- User authentication (registration, login, token refresh)
+- JWT token generation and verification
+- Business CRUD operations with geocoding
+- Product CRUD operations with inventory tracking
+- Product search with geolocation filtering
+- Redis caching for search results
+- Role-based access control (SME vs consumer)
+- Ownership validation middleware
+- Error handling with standardized format
 
-### Authentication
-Protected endpoints require JWT token in Authorization header:
-```
-Authorization: Bearer <access_token>
-```
+**⏳ Not Implemented:**
+- Order management
+- Payment processing
+- Delivery service integration
+- Rating and review system
+- Messaging system
+- Notifications
+- Analytics
+- Frontend application
+- File upload for images
+- WebSocket for real-time features
 
-### Request/Response Format
-- **Request:** JSON body with validated schemas
-- **Response:** Consistent JSON structure with data/error objects
-- **Timestamps:** ISO 8601 format
+### API Versioning
 
-### Error Responses
-Standardized error format:
-```json
-{
-  "error": {
-    "code": "ERROR_CODE",
-    "message": "Human-readable message",
-    "details": "Additional context (optional)",
-    "timestamp": "2025-11-12T10:30:00.000Z"
-  }
-}
-```
+All endpoints prefixed with `/api/v1/` to support future versioning without breaking existing clients.
 
-## Data Flow Patterns
+### Security Measures
 
-### User Registration Flow
-1. Client sends registration data to `/api/v1/auth/register`
-2. Auth service validates input with Joi schema
-3. Service checks for existing user (email uniqueness)
-4. Password is hashed with bcrypt
-5. User record created in database transaction
-6. If SME, business profile created in same transaction
-7. JWT tokens generated and returned to client
-
-### Business Location Update Flow
-1. Client sends address update to `/api/v1/businesses/:id`
-2. Business service validates ownership and input
-3. Geocoding utility converts address to coordinates
-4. PostGIS POINT geometry created from coordinates
-5. Database updated with new location and address
-6. Spatial index automatically updated
-7. Updated business profile returned to client
-
-### Order Creation Flow (Planned)
-1. Consumer submits cart items
-2. Order service validates product availability
-3. Inventory quantities checked and reserved
-4. Separate orders created per SME
-5. Payment processing initiated
-6. On success, inventory decremented
-7. Notifications sent to SMEs and consumer
-
-## Deployment Architecture (Planned)
-
-### Development Environment
-- Local PostgreSQL with PostGIS
-- Local Redis instance
-- Environment variables in `.env` file
-- Hot reload for rapid development
-
-### Production Environment
-- Load-balanced application servers
-- PostgreSQL cluster with read replicas
-- Redis cluster for high availability
-- CDN for static assets
-- Monitoring and logging (Sentry, ELK stack)
-- Automated backups and disaster recovery
-
-## Security Considerations
-
-### Authentication Security
+- Passwords hashed with bcrypt (10 salt rounds)
 - JWT secrets stored in environment variables
-- Refresh tokens for long-lived sessions
-- Token expiration enforced
-- Password complexity requirements (min 8 characters)
-
-### Data Security
-- Passwords never stored in plain text
-- Sensitive data encrypted at rest (planned)
-- HTTPS enforced in production
-- SQL injection prevention via parameterized queries
-- XSS protection through input sanitization
-
-### Access Control
-- Role-based permissions (SME, consumer, admin)
-- Resource ownership validation
-- API rate limiting (planned)
-- CORS configuration for allowed origins
-
-## Performance Targets
-
-- **API Response Time:** < 200ms (95th percentile)
-- **Map Loading:** < 2 seconds (1000+ businesses)
-- **Search Results:** < 500ms
-- **Mobile Page Load:** < 3 seconds (4G network)
-- **Database Query Time:** < 50ms (indexed queries)
-- **Concurrent Users:** 10,000+ simultaneous connections
-
-## Monitoring and Observability (Planned)
-
-- Application performance monitoring (APM)
-- Error tracking and alerting
-- Database query performance analysis
-- API endpoint metrics
-- User behavior analytics
-- Infrastructure health monitoring
+- SQL injection prevented by parameterized queries
+- CORS enabled for cross-origin requests
+- Input validation on all endpoints
+- Role-based access control enforced
+- Ownership checks for resource modifications

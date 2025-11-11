@@ -120,7 +120,12 @@
 
 
   
-  - [ ] 4.2 Create business API routes
+  - [x] 4.2 Create business API routes
+
+
+
+
+
     - Implement POST /api/v1/businesses endpoint for registration
     - Implement GET /api/v1/businesses/:id endpoint for profile retrieval
     - Implement PUT /api/v1/businesses/:id endpoint for profile updates
@@ -142,15 +147,24 @@
     - Log all staff actions
     - _Requirements: 18.1, 18.2, 18.3, 18.4, 18.5_
 
-- [ ] 5. Build product and inventory service
-  - [ ] 5.1 Create product service module
+- [x] 5. Build product and inventory service
+
+
+
+
+
+  - [x] 5.1 Create product service module
+
+
     - Implement product CRUD operations with validation
     - Create database queries for product management
     - Implement image upload handling (S3 or local storage)
     - Support product categorization with predefined categories
     - _Requirements: 2.1, 2.5_
   
-  - [ ] 5.2 Create product API routes
+  - [x] 5.2 Create product API routes
+
+
     - Implement POST /api/v1/products endpoint for product creation
     - Implement GET /api/v1/products/:id endpoint for product details
     - Implement PUT /api/v1/products/:id endpoint for updates
@@ -159,7 +173,9 @@
     - Restrict product management to business owners
     - _Requirements: 2.1, 2.2, 2.3, 2.4_
   
-  - [ ] 5.3 Implement product search functionality
+  - [x] 5.3 Implement product search functionality
+
+
     - Create GET /api/v1/products/search endpoint
     - Implement database queries with filters (keyword, category, price range)
     - Support geolocation-based filtering with distance calculation
@@ -167,7 +183,8 @@
     - Cache search results in Redis for performance
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
   
-  - [ ] 5.4 Implement product listing by business
+  - [x] 5.4 Implement product listing by business
+
     - Create GET /api/v1/businesses/:id/products endpoint
     - Return all products for a specific business
     - Include inventory status and images

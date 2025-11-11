@@ -2,263 +2,148 @@
 
 ## Overview
 
-CoShop follows a service-oriented architecture where each service is responsible for a specific business domain. Services are implemented as modules in `/backend/src/services/` and exposed through API routes in `/backend/src/routes/`.
-
-## Service Organization
-
-### Directory Structure
-```
-backend/src/
-├── services/          # Business logic layer
-│   ├── authService.js
-│   ├── businessService.js
-│   ├── productService.js (planned)
-│   ├── orderService.js (planned)
-│   └── ...
-├── routes/            # API endpoint definitions
-│   ├── authRoutes.js
-│   ├── businessRoutes.js
-│   └── ...
-├── middleware/        # Request processing
-│   ├── authMiddleware.js
-│   └── rbacMiddleware.js
-├── utils/             # Helper functions
-│   ├── jwtUtils.js
-│   └── geocodingUtils.js
-└── config/            # Configuration
-    ├── database.js
-    └── redis.js
-```
+The backend is organized into service modules, each responsible for a specific domain. Services contain business logic, data validation, and database operations.
 
 ## Implemented Services
 
-### 1. Authentication Service
+### 1. Authentication Service (`authService.js`)
 
-**Location:** `/backend/src/services/authService.js`
+**Purpose:** Manages user registration, authentication, and password operations.
 
-**Purpose:** Manages user registration, authentication, and password security.
-
-**Key Responsibilities:**
-- User registration for SMEs and consumers
-- Credential validation and authentication
-- Password hashing and comparison
-- Input validation with Joi schemas
-- User retrieval by ID
-
-**Core Functions:**
-- `registerUser(userData)` - Creates new user account with optional business profile
-- `authenticateUser(credentials)` - Validates email/password and returns user data
+**Key Functions:**
+- `registerUser(userData)` - Creates new user account (consumer or SME)
+- `authenticateUser(credentials)` - Validates credentials and returns user data
 - `getUserById(userId)` - Retrieves user information
-- `hashPassword(password)` - Bcrypt hashing with 10 salt rounds
-- `comparePassword(password, hash)` - Verifies password against stored hash
-- `validateRegistration(data)` - Joi schema validation for registration
-- `validateLogin(data)` - Joi schema validation for login
+- `hashPassword(password)` - Hashes passwords with bcrypt
+- `comparePassword(password, hash)` - Verifies password against hash
 
-**Validation Rules:**
-- Email must be valid format
-- Password minimum 8 characters
-- User type must be 'sme' or 'consumer'
-- SME registration requires business information
-- Business type must be 'shop', 'business', or 'service'
+**Validation Schemas:**
+- `registrationSchema` - Validates email, password, userType, and optional businessInfo
+- `loginSchema` - Validates email and password
+
+**Business Logic:**
+- Checks for duplicate email addresses
+- Hashes passwords with 10 salt rounds
+- Creates business profile automatically for SME registrations
+- Uses database transactions for atomic operations
 
 **Error Handling:**
-- `VALIDATION_ERROR` (400) - Invalid input data
-- `USER_EXISTS` (409) - Email already registered
-- `INVALID_CREDENTIALS` (401) - Wrong email or password
-- `USER_NOT_FOUND` (404) - User ID doesn't exist
+- 400: Validation errors
+- 401: Invalid credentials
+- 404: User not found
+- 409: User already exists
 
-**Database Interactions:**
-- Inserts into `users` table
-- Optionally inserts into `businesses` table (for SMEs)
-- Uses transactions for atomic operations
-- Checks email uniqueness before insertion
+### 2. Business Service (`businessService.js`)
 
-### 2. Business Service
+**Purpose:** Manages SME business profiles, locations, and CRUD operations.
 
-**Location:** `/backend/src/services/businessService.js`
-
-**Purpose:** Manages SME business profiles, registration, and location data.
-
-**Key Responsibilities:**
-- Business registration with geolocation
-- Profile updates and management
-- Address geocoding to coordinates
-- Ownership validation
-- Business retrieval and listing
-
-**Core Functions:**
+**Key Functions:**
 - `registerBusiness(ownerId, businessData)` - Creates new business with geocoded location
 - `getBusinessById(businessId)` - Retrieves business profile
 - `updateBusiness(businessId, ownerId, updateData)` - Updates business information
-- `deleteBusiness(businessId, ownerId)` - Removes business and related data
+- `deleteBusiness(businessId, ownerId)` - Removes business (cascade deletes products)
 - `getBusinessesByOwner(ownerId)` - Lists all businesses for an owner
 
-**Validation Rules:**
-- Business name 2-255 characters
-- Description max 5000 characters
-- Business type: 'shop', 'business', or 'service'
-- Address, city, country required
-- Valid email and phone format
-- Operating hours in HH:MM format
+**Validation Schemas:**
+- `businessRegistrationSchema` - Validates name, type, address, contact info
+- `businessUpdateSchema` - Validates partial updates
 
-**Geocoding Integration:**
-- Converts address to latitude/longitude coordinates
-- Uses OpenStreetMap Nominatim (primary)
+**Business Logic:**
+- Verifies user is SME type before allowing business creation
+- Geocodes addresses using `geocodingUtils`
+- Stores location as PostGIS GEOGRAPHY(POINT)
+- Validates ownership before updates/deletes
+- Re-geocodes address when location fields change
+
+**Geospatial Operations:**
+- Converts address to coordinates via OpenStreetMap Nominatim
 - Falls back to Google Maps API if configured
-- Validates coordinate ranges
-- Creates PostGIS POINT geometry
+- Stores as `POINT(longitude latitude)` in WGS84 (SRID 4326)
+- Extracts coordinates using `ST_X()` and `ST_Y()` for responses
 
 **Error Handling:**
-- `VALIDATION_ERROR` (400) - Invalid business data
-- `USER_NOT_FOUND` (404) - Owner doesn't exist
-- `FORBIDDEN` (403) - Non-SME user or wrong owner
-- `BUSINESS_NOT_FOUND` (404) - Business doesn't exist
-- `INVALID_ADDRESS` (400) - Geocoding failed
-- `NO_UPDATES` (400) - No fields to update
+- 400: Invalid address, validation errors
+- 403: Not authorized to modify business
+- 404: Business or user not found
 
-**Database Interactions:**
-- Inserts/updates `businesses` table
-- Stores location as PostGIS GEOGRAPHY(POINT)
-- Uses transactions for data consistency
-- Validates user type and ownership
-- Cascading deletes for related records
+### 3. Product Service (`productService.js`)
 
-## Planned Services
+**Purpose:** Manages product catalog, inventory, and search functionality.
 
-### 3. Product/Inventory Service
+**Key Functions:**
+- `createProduct(businessId, productData)` - Adds new product to catalog
+- `getProductById(productId)` - Retrieves product with business info
+- `updateProduct(productId, businessId, updateData)` - Updates product details
+- `deleteProduct(productId, businessId)` - Removes product
+- `updateInventory(productId, businessId, quantityData)` - Updates stock quantity
+- `getProductsByBusiness(businessId)` - Lists all products for a business
+- `searchProducts(searchParams)` - Advanced search with filters and geolocation
 
-**Purpose:** Manage product catalogs and inventory tracking.
+**Validation Schemas:**
+- `productCreateSchema` - Validates name, price, quantity, category, images
+- `productUpdateSchema` - Validates partial updates
+- `inventoryUpdateSchema` - Validates quantity updates
 
-**Key Responsibilities:**
-- Product CRUD operations
-- Inventory quantity management
-- Product search and filtering
-- Category management
-- Image upload handling
+**Product Categories:**
+15 predefined categories: electronics, clothing, food, beverages, home, beauty, health, sports, books, toys, automotive, office, garden, pets, other
 
-**Planned Functions:**
-- `createProduct(businessId, productData)`
-- `updateProduct(productId, updates)`
-- `updateInventory(productId, quantity)`
-- `searchProducts(query)`
-- `getProductsByBusiness(businessId)`
+**Search Capabilities:**
+- Keyword search (name or description, case-insensitive)
+- Category filtering
+- Price range filtering (min/max)
+- Geolocation filtering (radius-based)
+- Distance calculation from user location
+- Sorting by: price, created_at, name, rating, distance
+- Pagination (limit/offset)
 
-### 4. Order Management Service
+**Caching Strategy:**
+- Search results cached in Redis for 5 minutes (300 seconds)
+- Cache key generated from search parameters
+- Cache invalidated on product create/update/delete
+- Pattern-based cache deletion (`products:search:*`)
 
-**Purpose:** Handle order creation, processing, and status tracking.
+**Business Logic:**
+- Verifies business exists before product creation
+- Validates business ownership for modifications
+- Auto-calculates `in_stock` status (generated column)
+- Joins with business data for enriched responses
+- Uses PostGIS `ST_Distance()` for location-based search
+- `ST_DWithin()` for radius filtering
 
-**Key Responsibilities:**
-- Order creation from cart items
-- Inventory validation and reservation
-- Order status workflow management
-- Payment integration
-- Delivery service coordination
+**Error Handling:**
+- 400: Validation errors, no updates provided
+- 403: Not authorized to modify product
+- 404: Product or business not found
 
-**Planned Functions:**
-- `createOrder(consumerId, orderData)`
-- `updateOrderStatus(orderId, status)`
-- `getOrdersByConsumer(consumerId)`
-- `getOrdersBySME(businessId)`
-- `processPayment(orderId, paymentMethod)`
+## Service Patterns
 
-### 5. Geolocation Service
+### Validation Pattern
 
-**Purpose:** Provide location-based business discovery and spatial queries.
+All services use Joi for input validation:
 
-**Key Responsibilities:**
-- Nearby business search with radius
-- Distance calculations
-- Map bounds filtering
-- Geocoding utilities
+```javascript
+const { error, value } = schema.validate(data, { abortEarly: false });
+if (error) {
+  throw {
+    status: 400,
+    code: 'VALIDATION_ERROR',
+    message: 'Invalid data',
+    details: error.details.map(d => d.message)
+  };
+}
+```
 
-**Planned Functions:**
-- `findNearbyBusinesses(location, radius)`
-- `calculateDistance(from, to)`
-- `getBusinessesInBounds(bounds)`
-- `geocodeAddress(address)`
+### Transaction Pattern
 
-### 6. Rating & Review Service
+Multi-step operations use database transactions:
 
-**Purpose:** Manage bidirectional ratings between consumers and SMEs.
-
-**Key Responsibilities:**
-- Consumer ratings for businesses/products
-- SME ratings for consumer trustworthiness
-- Rating aggregation and averages
-- Review management and responses
-- Trust score calculation
-
-**Planned Functions:**
-- `rateBusinessByConsumer(orderId, rating)`
-- `rateConsumerBySME(orderId, rating)`
-- `getBusinessRatings(businessId)`
-- `getConsumerTrustScore(consumerId)`
-- `respondToReview(ratingId, response)`
-
-### 7. Messaging Service
-
-**Purpose:** Enable real-time communication between users.
-
-**Key Responsibilities:**
-- Message sending and retrieval
-- Conversation thread management
-- Read status tracking
-- Automated responses
-- WebSocket integration
-
-**Planned Functions:**
-- `sendMessage(from, to, message)`
-- `getConversation(userId1, userId2)`
-- `setAutoResponse(businessId, autoResponse)`
-- `markAsRead(messageId)`
-
-### 8. Notification Service
-
-**Purpose:** Multi-channel notification delivery and management.
-
-**Key Responsibilities:**
-- Notification creation and delivery
-- Channel management (email, SMS, push, in-app)
-- Preference management
-- Priority-based routing
-- Notification batching
-
-**Planned Functions:**
-- `sendNotification(userId, notification)`
-- `updatePreferences(userId, preferences)`
-- `getNotificationHistory(userId)`
-- `markAsRead(notificationId)`
-
-### 9. Analytics Service
-
-**Purpose:** Business performance metrics and reporting.
-
-**Key Responsibilities:**
-- Sales and revenue analytics
-- Product performance tracking
-- Customer demographics
-- Trend analysis
-- Data export functionality
-
-**Planned Functions:**
-- `getBusinessMetrics(businessId, period)`
-- `getProductPerformance(businessId)`
-- `getCustomerDemographics(businessId)`
-- `exportData(businessId, format)`
-
-## Service Communication Patterns
-
-### Direct Database Access
-Services directly query the PostgreSQL database using the connection pool from `/backend/src/config/database.js`. No inter-service communication layer exists currently.
-
-### Transaction Management
-Services use database transactions for operations that modify multiple tables:
 ```javascript
 const client = await pool.connect();
 try {
   await client.query('BEGIN');
-  // Multiple operations
+  // ... multiple queries
   await client.query('COMMIT');
+  return result;
 } catch (error) {
   await client.query('ROLLBACK');
   throw error;
@@ -267,134 +152,89 @@ try {
 }
 ```
 
-### Error Propagation
-Services throw structured error objects that are caught by Express error middleware:
+### Error Throwing Pattern
+
+Services throw structured error objects:
+
 ```javascript
 throw {
-  status: 400,
-  code: 'ERROR_CODE',
-  message: 'Human-readable message',
-  details: 'Additional context'
+  status: 404,
+  code: 'RESOURCE_NOT_FOUND',
+  message: 'Resource not found'
 };
 ```
 
-## Middleware Integration
+### Dynamic Query Building
 
-### Authentication Middleware
-**Location:** `/backend/src/middleware/authMiddleware.js`
+Services build SQL queries dynamically for partial updates:
 
-**Purpose:** Verify JWT tokens and attach user to request.
+```javascript
+const updates = [];
+const values = [];
+let paramCount = 1;
 
-**Functions:**
-- `authenticate(req, res, next)` - Required authentication
-- `optionalAuthenticate(req, res, next)` - Optional authentication
+if (value.name !== undefined) {
+  updates.push(`name = $${paramCount++}`);
+  values.push(value.name);
+}
+// ... more fields
 
-**Behavior:**
-- Extracts token from Authorization header
-- Verifies token signature and expiration
-- Loads user data from database
-- Attaches user object to `req.user`
-- Returns 401 for invalid/expired tokens
-
-### RBAC Middleware
-**Location:** `/backend/src/middleware/rbacMiddleware.js`
-
-**Purpose:** Enforce role-based access control.
-
-**Functions:**
-- `requireRole(...allowedTypes)` - Require specific user types
-- `requireSME()` - Shorthand for SME-only access
-- `requireConsumer()` - Shorthand for consumer-only access
-- `requireOwnership(getResourceOwnerId)` - Verify resource ownership
-- `requireBusinessOwnership(getBusinessOwnerId)` - SME + ownership check
-- `requireRoleOrOwnership(allowedRoles, getResourceOwnerId)` - Flexible access
-
-**Behavior:**
-- Checks `req.user.userType` against allowed roles
-- Validates resource ownership when needed
-- Returns 403 for insufficient permissions
-- Returns 401 if not authenticated
+const query = `UPDATE table SET ${updates.join(', ')} WHERE id = $${paramCount}`;
+```
 
 ## Utility Modules
 
-### JWT Utilities
-**Location:** `/backend/src/utils/jwtUtils.js`
+### JWT Utils (`jwtUtils.js`)
 
-**Purpose:** Token generation and verification.
+- `generateAccessToken(payload)` - Creates 15-minute access token
+- `generateRefreshToken(payload)` - Creates 7-day refresh token
+- `generateTokens(user)` - Creates both tokens
+- `verifyAccessToken(token)` - Validates and decodes access token
+- `verifyRefreshToken(token)` - Validates and decodes refresh token
 
-**Functions:**
-- `generateAccessToken(payload)` - 15-minute access token
-- `generateRefreshToken(payload)` - 7-day refresh token
-- `generateTokens(user)` - Both tokens at once
-- `verifyAccessToken(token)` - Validate access token
-- `verifyRefreshToken(token)` - Validate refresh token
-- `decodeToken(token)` - Decode without verification
+### Geocoding Utils (`geocodingUtils.js`)
 
-**Token Payload:**
-- `userId` - User UUID
-- `email` - User email
-- `userType` - 'sme' or 'consumer'
+- `geocodeAddress(address, city, country)` - Converts address to coordinates
+- `reverseGeocode(latitude, longitude)` - Converts coordinates to address
+- `validateCoordinates(latitude, longitude)` - Validates coordinate ranges
 
-### Geocoding Utilities
-**Location:** `/backend/src/utils/geocodingUtils.js`
+Uses OpenStreetMap Nominatim by default, falls back to Google Maps if API key configured.
 
-**Purpose:** Address-to-coordinate conversion.
+### Cache Utils (`cacheUtils.js`)
 
-**Functions:**
-- `geocodeAddress(address, city, country)` - Forward geocoding
-- `reverseGeocode(latitude, longitude)` - Reverse geocoding
-- `validateCoordinates(latitude, longitude)` - Coordinate validation
+- `getCached(key)` - Retrieves and parses cached value
+- `setCached(key, value, ttl)` - Stores value with TTL
+- `deleteCached(key)` - Removes single cache entry
+- `deleteCachedPattern(pattern)` - Removes all matching keys
+- `generateSearchCacheKey(params)` - Creates consistent cache keys
 
-**Behavior:**
-- Primary: OpenStreetMap Nominatim (free, no API key)
-- Fallback: Google Maps API (if configured)
-- Returns latitude, longitude, formatted address
-- Throws structured errors on failure
+## Service Dependencies
 
-## Configuration Modules
+```
+authService
+  ├── jwtUtils (token generation)
+  ├── pool (database)
+  └── bcrypt (password hashing)
 
-### Database Configuration
-**Location:** `/backend/src/config/database.js`
+businessService
+  ├── pool (database)
+  ├── geocodingUtils (address conversion)
+  └── joi (validation)
 
-**Purpose:** PostgreSQL connection pool management.
+productService
+  ├── pool (database)
+  ├── cacheUtils (search caching)
+  └── joi (validation)
+```
 
-**Configuration:**
-- Max connections: 20
-- Idle timeout: 30 seconds
-- Connection timeout: 2 seconds
-- Auto-reconnect on errors
+## Not Yet Implemented
 
-### Redis Configuration (Planned)
-**Location:** `/backend/src/config/redis.js`
-
-**Purpose:** Redis client for caching and sessions.
-
-## Service Design Patterns
-
-### Input Validation
-All services use Joi schemas for input validation before processing:
-- Define schema with validation rules
-- Validate input with `schema.validate(data)`
-- Return detailed error messages on failure
-- Proceed with validated data only
-
-### Error Handling
-Services throw structured error objects:
-- `status` - HTTP status code
-- `code` - Machine-readable error code
-- `message` - Human-readable description
-- `details` - Additional context (optional)
-
-### Database Transactions
-Multi-step operations use transactions:
-- Begin transaction before operations
-- Commit on success
-- Rollback on any error
-- Always release client connection
-
-### Ownership Validation
-Services verify user permissions:
-- Check user type (SME, consumer)
-- Validate resource ownership
-- Query database for owner_id
-- Compare with authenticated user ID
+Services planned but not yet built:
+- Order Service
+- Payment Service
+- Delivery Service
+- Rating Service
+- Messaging Service
+- Notification Service
+- Analytics Service
+- File Upload Service

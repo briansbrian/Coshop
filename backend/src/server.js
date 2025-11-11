@@ -1,12 +1,17 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import pool from './config/database.js';
 import authRoutes from './routes/authRoutes.js';
 import businessRoutes from './routes/businessRoutes.js';
+import productRoutes from './routes/productRoutes.js';
 
 dotenv.config();
 
 const app = express();
+
+// Make database pool available to routes
+app.locals.pool = pool;
 const PORT = process.env.PORT || 5000;
 const API_VERSION = process.env.API_VERSION || 'v1';
 
@@ -33,6 +38,9 @@ app.use(`/api/${API_VERSION}/auth`, authRoutes);
 
 // Business routes
 app.use(`/api/${API_VERSION}/businesses`, businessRoutes);
+
+// Product routes
+app.use(`/api/${API_VERSION}/products`, productRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

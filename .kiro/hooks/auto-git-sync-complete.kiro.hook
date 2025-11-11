@@ -4,8 +4,7 @@
   "description": "Monitors task completion files and automatically commits, pushes, and syncs all code changes to the git repository when a task is marked as complete",
   "version": "1",
   "when": {
-    "type": "fileEdited",
-    "patterns": []
+    "type": "userTriggered"
   },
   "then": {
     "type": "askAgent",

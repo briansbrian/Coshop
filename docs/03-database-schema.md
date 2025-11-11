@@ -2,557 +2,301 @@
 
 ## Overview
 
-CoShop uses PostgreSQL 14+ with the PostGIS extension for geospatial data support. The schema is designed for data integrity, performance, and scalability with proper indexing, foreign key constraints, and generated columns.
+PostgreSQL 14+ with PostGIS extension for geospatial data. All tables use UUID primary keys and include `created_at`/`updated_at` timestamps.
 
-**Schema Location:** `/database/init.sql`
-
-## Database Extensions
-
-### PostGIS
-**Purpose:** Enables geospatial data types and spatial queries.
-
-**Key Features:**
-- GEOGRAPHY(POINT) type for storing coordinates
-- Spatial indexes (GIST) for fast location queries
-- Distance calculations with ST_Distance
-- Geometry functions for spatial operations
-
-**Usage:**
-```sql
-CREATE EXTENSION IF NOT EXISTS postgis;
-```
-
-## Core Tables
+## Tables
 
 ### users
 
-**Purpose:** Stores all user accounts (SMEs and consumers).
-
-**Schema:**
-```sql
-CREATE TABLE users (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  email VARCHAR(255) UNIQUE NOT NULL,
-  password_hash VARCHAR(255) NOT NULL,
-  user_type VARCHAR(20) NOT NULL CHECK (user_type IN ('sme', 'consumer')),
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
+Stores all platform users (SMEs and consumers).
 
 **Columns:**
-- `id` - UUID primary key, auto-generated
-- `email` - Unique email address for login
-- `password_hash` - Bcrypt hashed password (never plain text)
-- `user_type` - Role: 'sme' or 'consumer'
-- `created_at` - Account creation timestamp
-- `updated_at` - Last modification timestamp (auto-updated by trigger)
-
-**Constraints:**
-- Email must be unique
-- User type restricted to 'sme' or 'consumer'
+- `id` UUID PRIMARY KEY (auto-generated)
+- `email` VARCHAR(255) UNIQUE NOT NULL
+- `password_hash` VARCHAR(255) NOT NULL (bcrypt hashed)
+- `user_type` VARCHAR(20) NOT NULL ('sme' or 'consumer')
+- `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+- `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 
 **Indexes:**
 - Primary key on `id`
 - Unique index on `email`
 
+**Triggers:**
+- `update_users_updated_at` - Auto-updates `updated_at` on row modification
+
 **Relationships:**
 - One user can own multiple businesses (1:N)
 - One user can place multiple orders (1:N)
 - One user can send/receive multiple messages (1:N)
-- One user can give/receive multiple ratings (1:N)
 
 ### businesses
 
-**Purpose:** Stores SME business profiles with geospatial location data.
-
-**Schema:**
-```sql
-CREATE TABLE businesses (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  owner_id UUID REFERENCES users(id) ON DELETE CASCADE,
-  name VARCHAR(255) NOT NULL,
-  description TEXT,
-  business_type VARCHAR(20) CHECK (business_type IN ('shop', 'business', 'service')),
-  location GEOGRAPHY(POINT, 4326),
-  address TEXT,
-  city VARCHAR(100),
-  country VARCHAR(100),
-  contact_email VARCHAR(255),
-  contact_phone VARCHAR(50),
-  verified BOOLEAN DEFAULT FALSE,
-  rating DECIMAL(3,2) DEFAULT 0,
-  total_ratings INTEGER DEFAULT 0,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
+Stores SME business profiles with geospatial location data.
 
 **Columns:**
-- `id` - UUID primary key
-- `owner_id` - Foreign key to users table
-- `name` - Business name
-- `description` - Business description (optional)
-- `business_type` - Type: 'shop', 'business', or 'service'
-- `location` - PostGIS GEOGRAPHY(POINT) with SRID 4326 (WGS84)
-- `address` - Street address
-- `city` - City name
-- `country` - Country name
-- `contact_email` - Business contact email
-- `contact_phone` - Business phone number
-- `verified` - Verification status (default false)
-- `rating` - Average rating (0.00 to 5.00)
-- `total_ratings` - Count of ratings received
-- `created_at` - Business registration timestamp
-- `updated_at` - Last modification timestamp
-
-**Constraints:**
-- Business type restricted to 'shop', 'business', 'service'
-- Cascading delete when owner is deleted
+- `id` UUID PRIMARY KEY (auto-generated)
+- `owner_id` UUID REFERENCES users(id) ON DELETE CASCADE
+- `name` VARCHAR(255) NOT NULL
+- `description` TEXT
+- `business_type` VARCHAR(20) ('shop', 'business', or 'service')
+- `location` GEOGRAPHY(POINT, 4326) - PostGIS geographic point
+- `address` TEXT
+- `city` VARCHAR(100)
+- `country` VARCHAR(100)
+- `contact_email` VARCHAR(255)
+- `contact_phone` VARCHAR(50)
+- `verified` BOOLEAN DEFAULT FALSE
+- `rating` DECIMAL(3,2) DEFAULT 0 (0.00 to 5.00)
+- `total_ratings` INTEGER DEFAULT 0
+- `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+- `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 
 **Indexes:**
-```sql
-CREATE INDEX idx_businesses_location ON businesses USING GIST(location);
-CREATE INDEX idx_businesses_verified ON businesses(verified);
-CREATE INDEX idx_businesses_owner ON businesses(owner_id);
-```
+- Primary key on `id`
+- GIST spatial index on `location` (enables fast geospatial queries)
+- B-tree index on `verified`
+- B-tree index on `owner_id`
 
-**Index Purposes:**
-- `idx_businesses_location` - GIST spatial index for nearby searches
-- `idx_businesses_verified` - Filter verified businesses
-- `idx_businesses_owner` - Query businesses by owner
+**Triggers:**
+- `update_businesses_updated_at` - Auto-updates `updated_at`
 
-**Geospatial Data:**
-- Location stored as GEOGRAPHY(POINT, 4326)
-- SRID 4326 = WGS84 coordinate system (standard GPS)
+**Geospatial Details:**
+- Location stored as GEOGRAPHY(POINT) in WGS84 (SRID 4326)
+- Format: `POINT(longitude latitude)`
 - Enables distance calculations in meters
-- Supports radius-based queries
+- Supports radius-based queries with `ST_DWithin()`
+
+**Relationships:**
+- Belongs to one user (owner)
+- Has many products (1:N)
+- Has many orders (1:N)
 
 ### products
 
-**Purpose:** Stores product catalog and inventory for each business.
-
-**Schema:**
-```sql
-CREATE TABLE products (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  business_id UUID REFERENCES businesses(id) ON DELETE CASCADE,
-  name VARCHAR(255) NOT NULL,
-  description TEXT,
-  price DECIMAL(10,2) NOT NULL,
-  quantity INTEGER NOT NULL DEFAULT 0,
-  category VARCHAR(100),
-  images TEXT[],
-  in_stock BOOLEAN GENERATED ALWAYS AS (quantity > 0) STORED,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
+Stores product catalog with inventory tracking.
 
 **Columns:**
-- `id` - UUID primary key
-- `business_id` - Foreign key to businesses table
-- `name` - Product name
-- `description` - Product description
-- `price` - Product price (2 decimal places)
-- `quantity` - Available inventory count
-- `category` - Product category
-- `images` - Array of image URLs
-- `in_stock` - Generated column (true if quantity > 0)
-- `created_at` - Product creation timestamp
-- `updated_at` - Last modification timestamp
-
-**Constraints:**
-- Cascading delete when business is deleted
-- Price must be positive (enforced by application)
-
-**Generated Columns:**
-- `in_stock` - Automatically computed from quantity
-- Stored (not virtual) for indexing
-- Updates automatically when quantity changes
+- `id` UUID PRIMARY KEY (auto-generated)
+- `business_id` UUID REFERENCES businesses(id) ON DELETE CASCADE
+- `name` VARCHAR(255) NOT NULL
+- `description` TEXT
+- `price` DECIMAL(10,2) NOT NULL
+- `quantity` INTEGER NOT NULL DEFAULT 0
+- `category` VARCHAR(100)
+- `images` TEXT[] (array of image URLs)
+- `in_stock` BOOLEAN GENERATED ALWAYS AS (quantity > 0) STORED
+- `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+- `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 
 **Indexes:**
-```sql
-CREATE INDEX idx_products_business ON products(business_id);
-CREATE INDEX idx_products_category ON products(category);
-CREATE INDEX idx_products_in_stock ON products(in_stock);
-```
+- Primary key on `id`
+- B-tree index on `business_id`
+- B-tree index on `category`
+- B-tree index on `in_stock`
 
-**Index Purposes:**
-- `idx_products_business` - List products by business
-- `idx_products_category` - Filter by category
-- `idx_products_in_stock` - Show only available products
+**Triggers:**
+- `update_products_updated_at` - Auto-updates `updated_at`
+
+**Generated Columns:**
+- `in_stock` automatically computed from `quantity > 0`
+- Updated automatically when quantity changes
+- Indexed for fast filtering
+
+**Relationships:**
+- Belongs to one business
+- Referenced by order_items (1:N)
 
 ### orders
 
-**Purpose:** Stores order transactions between consumers and businesses.
-
-**Schema:**
-```sql
-CREATE TABLE orders (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  consumer_id UUID REFERENCES users(id),
-  business_id UUID REFERENCES businesses(id),
-  total_amount DECIMAL(10,2) NOT NULL,
-  status VARCHAR(50) NOT NULL,
-  delivery_method VARCHAR(20) CHECK (delivery_method IN ('pickup', 'delivery')),
-  payment_status VARCHAR(20) CHECK (payment_status IN ('pending', 'completed', 'failed')),
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
+Stores customer orders.
 
 **Columns:**
-- `id` - UUID primary key
-- `consumer_id` - Foreign key to users (buyer)
-- `business_id` - Foreign key to businesses (seller)
-- `total_amount` - Order total (2 decimal places)
-- `status` - Order status (pending, confirmed, ready, out_for_delivery, delivered, cancelled)
-- `delivery_method` - 'pickup' or 'delivery'
-- `payment_status` - 'pending', 'completed', or 'failed'
-- `created_at` - Order creation timestamp
-- `updated_at` - Last status update timestamp
-
-**Constraints:**
-- Delivery method restricted to 'pickup' or 'delivery'
-- Payment status restricted to 'pending', 'completed', 'failed'
+- `id` UUID PRIMARY KEY (auto-generated)
+- `consumer_id` UUID REFERENCES users(id)
+- `business_id` UUID REFERENCES businesses(id)
+- `total_amount` DECIMAL(10,2) NOT NULL
+- `status` VARCHAR(50) NOT NULL
+- `delivery_method` VARCHAR(20) ('pickup' or 'delivery')
+- `payment_status` VARCHAR(20) ('pending', 'completed', or 'failed')
+- `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+- `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 
 **Indexes:**
-```sql
-CREATE INDEX idx_orders_consumer ON orders(consumer_id);
-CREATE INDEX idx_orders_business ON orders(business_id);
-CREATE INDEX idx_orders_status ON orders(status);
-```
+- Primary key on `id`
+- B-tree index on `consumer_id`
+- B-tree index on `business_id`
+- B-tree index on `status`
 
-**Index Purposes:**
-- `idx_orders_consumer` - Consumer order history
-- `idx_orders_business` - Business order management
-- `idx_orders_status` - Filter by order status
+**Triggers:**
+- `update_orders_updated_at` - Auto-updates `updated_at`
 
-**Status Workflow:**
-1. pending - Order created, awaiting confirmation
-2. confirmed - Business accepted order
-3. ready - Order ready for pickup/delivery
-4. out_for_delivery - In transit (delivery only)
-5. delivered - Order completed
-6. cancelled - Order cancelled
+**Relationships:**
+- Belongs to one consumer (user)
+- Belongs to one business
+- Has many order_items (1:N)
+- Has many ratings (1:N)
 
 ### order_items
 
-**Purpose:** Stores individual products within each order.
-
-**Schema:**
-```sql
-CREATE TABLE order_items (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  order_id UUID REFERENCES orders(id) ON DELETE CASCADE,
-  product_id UUID REFERENCES products(id),
-  quantity INTEGER NOT NULL,
-  price_at_purchase DECIMAL(10,2) NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
+Stores individual items within an order.
 
 **Columns:**
-- `id` - UUID primary key
-- `order_id` - Foreign key to orders table
-- `product_id` - Foreign key to products table
-- `quantity` - Number of units ordered
-- `price_at_purchase` - Product price at time of order (historical record)
-- `created_at` - Item creation timestamp
-
-**Constraints:**
-- Cascading delete when order is deleted
+- `id` UUID PRIMARY KEY (auto-generated)
+- `order_id` UUID REFERENCES orders(id) ON DELETE CASCADE
+- `product_id` UUID REFERENCES products(id)
+- `quantity` INTEGER NOT NULL
+- `price_at_purchase` DECIMAL(10,2) NOT NULL (captures price at time of order)
+- `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 
 **Indexes:**
-```sql
-CREATE INDEX idx_order_items_order ON order_items(order_id);
-```
+- Primary key on `id`
+- B-tree index on `order_id`
 
-**Index Purpose:**
-- `idx_order_items_order` - Retrieve all items for an order
-
-**Design Rationale:**
+**Design Notes:**
 - `price_at_purchase` preserves historical pricing
-- Allows product price changes without affecting past orders
-- Quantity stored per item for flexible ordering
+- Cascade delete when order is deleted
+- No `updated_at` (order items are immutable)
+
+**Relationships:**
+- Belongs to one order
+- References one product
 
 ### ratings
 
-**Purpose:** Stores bidirectional ratings between consumers and SMEs.
-
-**Schema:**
-```sql
-CREATE TABLE ratings (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  order_id UUID REFERENCES orders(id),
-  rater_id UUID REFERENCES users(id),
-  rated_id UUID REFERENCES users(id),
-  rating_type VARCHAR(20) CHECK (rating_type IN ('consumer_to_sme', 'sme_to_consumer')),
-  stars INTEGER CHECK (stars >= 1 AND stars <= 5),
-  review TEXT,
-  criteria JSONB,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
+Stores bidirectional ratings (consumer→SME and SME→consumer).
 
 **Columns:**
-- `id` - UUID primary key
-- `order_id` - Foreign key to orders (rating context)
-- `rater_id` - User giving the rating
-- `rated_id` - User receiving the rating
-- `rating_type` - 'consumer_to_sme' or 'sme_to_consumer'
-- `stars` - Rating value (1-5)
-- `review` - Written review text (optional)
-- `criteria` - JSONB object with detailed criteria scores
-- `created_at` - Rating creation timestamp
-
-**Constraints:**
-- Rating type restricted to two directions
-- Stars must be between 1 and 5
+- `id` UUID PRIMARY KEY (auto-generated)
+- `order_id` UUID REFERENCES orders(id)
+- `rater_id` UUID REFERENCES users(id) (who gave the rating)
+- `rated_id` UUID REFERENCES users(id) (who received the rating)
+- `rating_type` VARCHAR(20) ('consumer_to_sme' or 'sme_to_consumer')
+- `stars` INTEGER CHECK (stars >= 1 AND stars <= 5)
+- `review` TEXT
+- `criteria` JSONB (flexible criteria storage)
+- `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 
 **Indexes:**
-```sql
-CREATE INDEX idx_ratings_rated ON ratings(rated_id, rating_type);
-CREATE INDEX idx_ratings_order ON ratings(order_id);
-```
+- Primary key on `id`
+- Composite index on `(rated_id, rating_type)`
+- B-tree index on `order_id`
 
-**Index Purposes:**
-- `idx_ratings_rated` - Retrieve ratings for a user by type
-- `idx_ratings_order` - Check if order has been rated
+**JSONB Criteria Examples:**
+- Consumer→SME: `{"productQuality": 5, "service": 4, "value": 5}`
+- SME→Consumer: `{"paymentTimeliness": 5, "communication": 4, "compliance": 5}`
 
-**JSONB Criteria Structure:**
-
-Consumer rating SME:
-```json
-{
-  "productQuality": 4,
-  "service": 5,
-  "value": 4
-}
-```
-
-SME rating consumer:
-```json
-{
-  "paymentTimeliness": 5,
-  "communication": 4,
-  "compliance": 5
-}
-```
+**Relationships:**
+- Belongs to one order
+- References two users (rater and rated)
 
 ### messages
 
-**Purpose:** Stores conversation messages between users.
-
-**Schema:**
-```sql
-CREATE TABLE messages (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  sender_id UUID REFERENCES users(id),
-  receiver_id UUID REFERENCES users(id),
-  content TEXT NOT NULL,
-  read BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
+Stores user-to-user messages.
 
 **Columns:**
-- `id` - UUID primary key
-- `sender_id` - User who sent the message
-- `receiver_id` - User who receives the message
-- `content` - Message text
-- `read` - Read status (default false)
-- `created_at` - Message timestamp
+- `id` UUID PRIMARY KEY (auto-generated)
+- `sender_id` UUID REFERENCES users(id)
+- `receiver_id` UUID REFERENCES users(id)
+- `content` TEXT NOT NULL
+- `read` BOOLEAN DEFAULT FALSE
+- `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 
 **Indexes:**
-```sql
-CREATE INDEX idx_messages_conversation ON messages(sender_id, receiver_id);
-CREATE INDEX idx_messages_receiver ON messages(receiver_id, read);
-```
+- Primary key on `id`
+- Composite index on `(sender_id, receiver_id)` (conversation lookup)
+- Composite index on `(receiver_id, read)` (unread messages)
 
-**Index Purposes:**
-- `idx_messages_conversation` - Retrieve conversation thread
-- `idx_messages_receiver` - Unread message count
+**Relationships:**
+- References two users (sender and receiver)
 
 ### notifications
 
-**Purpose:** Stores in-app notifications for users.
-
-**Schema:**
-```sql
-CREATE TABLE notifications (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-  type VARCHAR(50) NOT NULL,
-  title VARCHAR(255) NOT NULL,
-  message TEXT NOT NULL,
-  priority VARCHAR(20),
-  read BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
+Stores user notifications.
 
 **Columns:**
-- `id` - UUID primary key
-- `user_id` - User receiving notification
-- `type` - Notification type (new_order, message, review, etc.)
-- `title` - Notification title
-- `message` - Notification content
-- `priority` - Priority level (low, medium, high)
-- `read` - Read status (default false)
-- `created_at` - Notification timestamp
-
-**Constraints:**
-- Cascading delete when user is deleted
+- `id` UUID PRIMARY KEY (auto-generated)
+- `user_id` UUID REFERENCES users(id) ON DELETE CASCADE
+- `type` VARCHAR(50) NOT NULL
+- `title` VARCHAR(255) NOT NULL
+- `message` TEXT NOT NULL
+- `priority` VARCHAR(20)
+- `read` BOOLEAN DEFAULT FALSE
+- `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 
 **Indexes:**
-```sql
-CREATE INDEX idx_notifications_user ON notifications(user_id, read);
-```
-
-**Index Purpose:**
-- `idx_notifications_user` - Retrieve unread notifications
+- Primary key on `id`
+- Composite index on `(user_id, read)` (unread notifications)
 
 **Notification Types:**
-- `new_order` - New order received
-- `message` - New message received
-- `review` - New rating/review
-- `low_inventory` - Product stock low
-- `payment` - Payment status update
-- `delivery_update` - Delivery status change
+- new_order
+- message
+- review
+- low_inventory
+- payment
+- delivery_update
 
-## Database Triggers
+**Relationships:**
+- Belongs to one user
 
-### Auto-Update Timestamps
+## Relationships Diagram
 
-**Purpose:** Automatically update `updated_at` column on row modifications.
+```
+users (1) ──────< (N) businesses
+  │                      │
+  │                      └──< (N) products
+  │                               │
+  │                               └──< (N) order_items
+  │                                        │
+  └──< (N) orders ─────────────────────────┘
+       │
+       └──< (N) ratings
 
-**Function:**
+users (1) ──< (N) messages (sender)
+users (1) ──< (N) messages (receiver)
+users (1) ──< (N) notifications
+```
+
+## PostGIS Functions Used
+
+**Distance Calculation:**
 ```sql
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = CURRENT_TIMESTAMP;
-    RETURN NEW;
-END;
-$$ language 'plpgsql';
+ST_Distance(location1, location2) -- Returns distance in meters
 ```
 
-**Triggers:**
+**Radius Search:**
 ```sql
-CREATE TRIGGER update_users_updated_at 
-  BEFORE UPDATE ON users
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_businesses_updated_at 
-  BEFORE UPDATE ON businesses
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_products_updated_at 
-  BEFORE UPDATE ON products
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_orders_updated_at 
-  BEFORE UPDATE ON orders
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+ST_DWithin(location, point, radius_meters) -- Returns true if within radius
 ```
 
-## Relationship Diagram
-
-```
-users (1) ──────────────> (N) businesses
-  │                            │
-  │                            │
-  │ (1)                   (N) │
-  │                            │
-  ├──────> (N) orders <────────┘
-  │            │
-  │            │ (1)
-  │            │
-  │       (N) │
-  │            │
-  │       order_items (N) ───> (1) products
-  │
-  ├──────> (N) ratings (as rater)
-  │
-  ├──────> (N) ratings (as rated)
-  │
-  ├──────> (N) messages (as sender)
-  │
-  ├──────> (N) messages (as receiver)
-  │
-  └──────> (N) notifications
+**Point Creation:**
+```sql
+ST_GeogFromText('POINT(longitude latitude)')
 ```
 
-## Indexing Strategy
+**Coordinate Extraction:**
+```sql
+ST_X(location::geometry) -- Longitude
+ST_Y(location::geometry) -- Latitude
+```
 
-### Primary Keys
-All tables use UUID primary keys for:
-- Global uniqueness
-- Security (non-sequential)
-- Distributed system compatibility
+## Cascade Behavior
 
-### Foreign Keys
-All foreign key columns are indexed for:
-- Fast JOIN operations
-- Referential integrity checks
-- Cascading delete performance
+**ON DELETE CASCADE:**
+- Deleting a user deletes their businesses, orders, messages, notifications
+- Deleting a business deletes its products
+- Deleting an order deletes its order_items
 
-### Spatial Indexes
-GIST indexes on geospatial columns for:
-- Nearby business queries
-- Distance calculations
-- Bounding box searches
+**Why:** Maintains referential integrity and prevents orphaned records.
 
-### Composite Indexes
-Multi-column indexes for common query patterns:
-- `(sender_id, receiver_id)` for conversations
-- `(user_id, read)` for unread notifications
-- `(rated_id, rating_type)` for rating aggregation
+## Automatic Timestamp Updates
 
-### Generated Column Indexes
-Indexes on computed columns:
-- `in_stock` for product availability filtering
+All tables with `updated_at` have triggers that automatically update the timestamp on row modification using the `update_updated_at_column()` function.
 
-## Performance Considerations
+## Data Integrity Constraints
 
-### Query Optimization
-- Indexes on all foreign keys
-- Spatial indexes for geolocation queries
-- Composite indexes for common filters
-- Generated columns for computed values
-
-### Data Integrity
-- Foreign key constraints with cascading deletes
-- CHECK constraints for enum-like values
+- CHECK constraints on enums (user_type, business_type, delivery_method, payment_status, rating_type)
+- CHECK constraint on ratings (1-5 stars)
+- UNIQUE constraint on user email
 - NOT NULL constraints on required fields
-- UNIQUE constraints on email addresses
-
-### Scalability
-- UUID primary keys for distributed systems
-- Timestamp columns for audit trails
-- JSONB for flexible schema evolution
-- Array types for multi-value fields
-
-## Future Schema Additions (Planned)
-
-### promotions
-- Discount codes and campaigns
-- Usage tracking and limits
-
-### staff_accounts
-- Multiple users per business
-- Role-based permissions
-
-### verification_documents
-- Business verification files
-- Document status tracking
-
-### analytics_events
-- User behavior tracking
-- Business metrics aggregation
-
-### favorites
-- Consumer saved businesses/products
-- Wishlist functionality
+- Foreign key constraints with appropriate cascade rules

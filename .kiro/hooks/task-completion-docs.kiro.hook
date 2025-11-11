@@ -4,8 +4,7 @@
   "description": "After every task is complete, automatically create or update hierarchical documentation in a doc folder. The documentation should help LLMs and developers understand the project structure, features, and logic for updates and bug fixes. Documentation should be precise with minimal code examples.",
   "version": "1",
   "when": {
-    "type": "fileEdited",
-    "patterns": []
+    "type": "userTriggered"
   },
   "then": {
     "type": "askAgent",
