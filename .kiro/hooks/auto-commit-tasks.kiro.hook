@@ -1,13 +1,11 @@
 {
   "enabled": true,
   "name": "Auto-commit on Task Completion",
-  "description": "Automatically commits code changes to the git repository whenever a task is marked as complete",
+  "description": "Automatically commits,push and sync code changes to the git repository whenever a task is marked as complete",
   "version": "1",
   "when": {
     "type": "fileEdited",
-    "patterns": [
-      "**/*"
-    ]
+    "patterns": []
   },
   "then": {
     "type": "askAgent",

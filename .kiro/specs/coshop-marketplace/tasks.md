@@ -104,13 +104,21 @@
     - Send reset emails (can be added post-MVP)
     - _Requirements: 1.5_
 
-- [ ] 4. Build SME management service
-  - [ ] 4.1 Create business service module
+- [x] 4. Build SME management service
+
+
+
+
+  - [x] 4.1 Create business service module
+
+
     - Implement business registration logic with validation
     - Create database queries for business CRUD operations
     - Implement geocoding utility to convert addresses to coordinates
     - Store business location as PostGIS GEOGRAPHY(POINT)
     - _Requirements: 1.1, 1.2, 1.3_
+
+
   
   - [ ] 4.2 Create business API routes
     - Implement POST /api/v1/businesses endpoint for registration

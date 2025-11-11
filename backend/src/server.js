@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes.js';
+import businessRoutes from './routes/businessRoutes.js';
 
 dotenv.config();
 
@@ -29,6 +30,9 @@ app.get(`/api/${API_VERSION}`, (req, res) => {
 
 // Authentication routes
 app.use(`/api/${API_VERSION}/auth`, authRoutes);
+
+// Business routes
+app.use(`/api/${API_VERSION}/businesses`, businessRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
