@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "Task Completion Documentation",
+  "description": "After every task is complete, automatically create or update hierarchical documentation in a doc folder. The documentation should help LLMs and developers understand the project structure, features, and logic for updates and bug fixes. Documentation should be precise with minimal code examples.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": []
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Files have been modified. Analyze the changes and update the hierarchical documentation in the doc folder (create it if it doesn't exist). Generate multiple focused documents covering:\n\n1. Project architecture and service structure\n2. Feature implementations and their logic flows\n3. Database schema and relationships\n4. API endpoints and integration points\n5. Key business logic and algorithms\n\nMake documentation precise and LLM-friendly with minimal code snippets. Focus on explaining WHAT each component does, WHY it exists, and HOW it connects to other parts. Use clear hierarchical organization so developers can quickly locate information for updates or bug fixes."
+  }
+}
