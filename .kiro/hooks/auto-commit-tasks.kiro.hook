@@ -1,0 +1,16 @@
+{
+  "enabled": true,
+  "name": "Auto-commit on Task Completion",
+  "description": "Automatically commits code changes to the git repository whenever a task is marked as complete",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "**/*"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A task has been completed. Please commit all current changes to the git repository with a descriptive commit message that summarizes what was accomplished in this task. Use 'git add .' to stage all changes, then 'git commit -m \"your message\"' to commit them."
+  }
+}

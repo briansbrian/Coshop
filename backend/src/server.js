@@ -1,11 +1,13 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import authRoutes from './routes/authRoutes.js';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const API_VERSION = process.env.API_VERSION || 'v1';
 
 // Middleware
 app.use(cors());
@@ -17,13 +19,16 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'CoShop API is running' });
 });
 
-// API routes will be added here
-app.get(`/api/${process.env.API_VERSION || 'v1'}`, (req, res) => {
+// API routes
+app.get(`/api/${API_VERSION}`, (req, res) => {
   res.json({ 
     message: 'CoShop Marketplace API',
-    version: process.env.API_VERSION || 'v1'
+    version: API_VERSION
   });
 });
+
+// Authentication routes
+app.use(`/api/${API_VERSION}/auth`, authRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
