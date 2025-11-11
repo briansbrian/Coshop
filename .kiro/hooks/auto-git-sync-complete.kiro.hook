@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "Auto Git Sync on Task Complete",
+  "description": "Monitors task completion files and automatically commits, pushes, and syncs all code changes to the git repository when a task is marked as complete",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": []
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A task has been marked as complete. Please perform the following git operations in sequence:\n1. Stage all changes using 'git add .'\n2. Create a commit with a descriptive message that includes the completed task details\n3. Push the changes to the remote repository using 'git push'\n4. Verify the sync was successful\n\nIf there are any conflicts or errors, report them clearly. Include the task completion details in the commit message."
+  }
+}
