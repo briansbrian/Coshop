@@ -190,22 +190,32 @@
     - Include inventory status and images
     - _Requirements: 6.2_
 
-- [ ] 6. Build geolocation service
-  - [ ] 6.1 Create geolocation service module
+- [x] 6. Build geolocation service
+
+
+
+
+  - [x] 6.1 Create geolocation service module
+
+
     - Implement PostGIS spatial queries for nearby businesses
     - Create distance calculation utility using ST_Distance
     - Implement radius-based business search
     - Cache location queries in Redis
     - _Requirements: 3.1, 3.2_
   
-  - [ ] 6.2 Create geolocation API routes
+  - [x] 6.2 Create geolocation API routes
+
+
     - Implement GET /api/v1/businesses/nearby endpoint
     - Accept latitude, longitude, and radius parameters
     - Return businesses with distance calculations
     - Support filtering by business type, verified status, ratings
     - _Requirements: 3.1, 3.2, 3.3, 3.5_
   
-  - [ ] 6.3 Implement geocoding utilities
+
+  - [x] 6.3 Implement geocoding utilities
+
     - Integrate with Google Maps Geocoding API or OpenStreetMap Nominatim
     - Create utility function to convert addresses to coordinates
     - Implement reverse geocoding (coordinates to address)
@@ -213,6 +223,7 @@
     - _Requirements: 5.4_
 
 - [ ] 7. Build order management service
+
   - [ ] 7.1 Create order service module
     - Implement order creation logic with validation
     - Create database queries for order and order_items
@@ -393,7 +404,7 @@
     - Support filtering by type (business/product)
     - _Requirements: 15.1, 15.2, 15.5_
 
-- [ ] 17. Build frontend web application
+- [ ]* 17. Build frontend web application
   - [ ] 17.1 Set up API client and state management
     - Create axios API client with base URL configuration
     - Implement request/response interceptors for JWT tokens

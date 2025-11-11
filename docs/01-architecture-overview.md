@@ -108,29 +108,34 @@ All errors follow a standardized format with status codes, error codes, and time
 
 ### Current Implementation Status
 
-**✅ Completed:**
-- Database schema with PostGIS support
-- User authentication (registration, login, token refresh)
-- JWT token generation and verification
-- Business CRUD operations with geocoding
-- Product CRUD operations with inventory tracking
-- Product search with geolocation filtering
-- Redis caching for search results
-- Role-based access control (SME vs consumer)
-- Ownership validation middleware
-- Error handling with standardized format
+**✅ Completed (Backend Core):**
+- **Database**: Complete schema with PostGIS extension, spatial indexes, and triggers
+- **Authentication**: User registration (SME/consumer), login, JWT token refresh
+- **JWT Tokens**: Access tokens (15min), refresh tokens (7d), verification middleware
+- **Business Management**: CRUD operations, automatic geocoding, location updates
+- **Product Management**: CRUD operations, inventory tracking, category management
+- **Product Search**: Keyword search, category/price filters, geolocation-based sorting
+- **Geolocation Service**: Nearby business search, distance calculations, map bounds queries
+- **Caching**: Redis integration with TTLs (5min for searches, 24hr for geocoding)
+- **Authorization**: Role-based access control (SME vs consumer), ownership validation
+- **Validation**: Joi schemas for all inputs, coordinate validation, address validation
+- **Error Handling**: Standardized error format, typed exceptions, proper HTTP status codes
+- **Transactions**: Database transactions for multi-step operations
 
 **⏳ Not Implemented:**
-- Order management
-- Payment processing
-- Delivery service integration
-- Rating and review system
-- Messaging system
-- Notifications
-- Analytics
-- Frontend application
-- File upload for images
-- WebSocket for real-time features
+- Order management and workflow (pending, confirmed, delivered states)
+- Payment processing integration (Stripe, M-Pesa, PayPal)
+- Delivery service integration (Uber API, Pick Up Mtaani API)
+- Bidirectional rating system (consumer→SME and SME→consumer)
+- Real-time messaging (WebSocket server, conversation threads)
+- Multi-channel notifications (email, SMS, push, in-app)
+- Business analytics and reporting (metrics, trends, exports)
+- File upload service (images for products and businesses)
+- Frontend web application (only skeleton structure exists)
+- Business verification workflow (document upload and review)
+- Staff account management (role-based permissions for business staff)
+- Promotions and discounts (coupon codes, usage tracking)
+- Favorites/wishlist functionality (save businesses and products)
 
 ### API Versioning
 

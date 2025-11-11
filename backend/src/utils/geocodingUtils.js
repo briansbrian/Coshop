@@ -1,19 +1,30 @@
 import axios from 'axios';
 import dotenv from 'dotenv';
+import { getCached, setCached } from './cacheUtils.js';
 
 dotenv.config();
 
 /**
  * Geocoding Utilities
- * Convert addresses to coordinates and vice versa
+ * Convert addresses to coordinates and vice versa with Redis caching
  */
 
 /**
  * Convert address to geographic coordinates using OpenStreetMap Nominatim
  * Falls back to Google Maps Geocoding API if configured
+ * Results are cached in Redis for 24 hours to reduce API calls
  */
 export const geocodeAddress = async (address, city, country) => {
   const fullAddress = `${address}, ${city}, ${country}`;
+  
+  // Generate cache key
+  const cacheKey = `geocode:forward:${fullAddress.toLowerCase()}`;
+  
+  // Check cache first (TTL: 24 hours)
+  const cachedResult = await getCached(cacheKey);
+  if (cachedResult) {
+    return cachedResult;
+  }
   
   try {
     // Try OpenStreetMap Nominatim first (free, no API key required)
@@ -31,16 +42,26 @@ export const geocodeAddress = async (address, city, country) => {
 
     if (response.data && response.data.length > 0) {
       const result = response.data[0];
-      return {
+      const geocodeResult = {
         latitude: parseFloat(result.lat),
         longitude: parseFloat(result.lon),
         formattedAddress: result.display_name
       };
+      
+      // Cache the result for 24 hours (86400 seconds)
+      await setCached(cacheKey, geocodeResult, 86400);
+      
+      return geocodeResult;
     }
 
     // If Nominatim fails and Google Maps API key is available, try Google
     if (process.env.GOOGLE_MAPS_API_KEY) {
-      return await geocodeWithGoogle(fullAddress);
+      const googleResult = await geocodeWithGoogle(fullAddress);
+      
+      // Cache the Google result for 24 hours
+      await setCached(cacheKey, googleResult, 86400);
+      
+      return googleResult;
     }
 
     throw {
@@ -107,8 +128,18 @@ const geocodeWithGoogle = async (address) => {
 
 /**
  * Reverse geocode: convert coordinates to address
+ * Results are cached in Redis for 24 hours to reduce API calls
  */
 export const reverseGeocode = async (latitude, longitude) => {
+  // Generate cache key
+  const cacheKey = `geocode:reverse:${latitude},${longitude}`;
+  
+  // Check cache first (TTL: 24 hours)
+  const cachedResult = await getCached(cacheKey);
+  if (cachedResult) {
+    return cachedResult;
+  }
+  
   try {
     // Use OpenStreetMap Nominatim for reverse geocoding
     const nominatimUrl = 'https://nominatim.openstreetmap.org/reverse';
@@ -124,11 +155,17 @@ export const reverseGeocode = async (latitude, longitude) => {
     });
 
     if (response.data && response.data.display_name) {
-      return {
+      const reverseResult = {
         address: response.data.display_name,
         city: response.data.address?.city || response.data.address?.town || '',
-        country: response.data.address?.country || ''
+        country: response.data.address?.country || '',
+        formattedAddress: response.data.display_name
       };
+      
+      // Cache the result for 24 hours (86400 seconds)
+      await setCached(cacheKey, reverseResult, 86400);
+      
+      return reverseResult;
     }
 
     throw {
