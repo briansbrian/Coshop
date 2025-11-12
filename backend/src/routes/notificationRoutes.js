@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticateToken } from '../middleware/authMiddleware.js';
+import { authenticate } from '../middleware/authMiddleware.js';
 import {
   getNotificationsByUser,
   markNotificationAsRead,
@@ -12,7 +12,7 @@ const router = express.Router();
  * GET /api/v1/notifications
  * Get notification history for authenticated user
  */
-router.get('/', authenticateToken, async (req, res, next) => {
+router.get('/', authenticate, async (req, res, next) => {
   try {
     const userId = req.user.id;
     const { read, type, priority, limit } = req.query;
@@ -52,7 +52,7 @@ router.get('/', authenticateToken, async (req, res, next) => {
  * PATCH /api/v1/notifications/:id/read
  * Mark a notification as read
  */
-router.patch('/:id/read', authenticateToken, async (req, res, next) => {
+router.patch('/:id/read', authenticate, async (req, res, next) => {
   try {
     const notificationId = req.params.id;
     const userId = req.user.id;
@@ -72,7 +72,7 @@ router.patch('/:id/read', authenticateToken, async (req, res, next) => {
  * GET /api/v1/notifications/unread/count
  * Get count of unread notifications for authenticated user
  */
-router.get('/unread/count', authenticateToken, async (req, res, next) => {
+router.get('/unread/count', authenticate, async (req, res, next) => {
   try {
     const userId = req.user.id;
 

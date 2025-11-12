@@ -20,3 +20,4 @@ export {
   handleUnhandledRejection,
   handleUncaughtException
 } from './errorMiddleware.js';
+export { uploadSingle, uploadMultiple } from './uploadMiddleware.js';

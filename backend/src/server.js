@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import pool from './config/database.js';
 import authRoutes from './routes/authRoutes.js';
 import businessRoutes from './routes/businessRoutes.js';
@@ -9,6 +11,7 @@ import geolocationRoutes from './routes/geolocationRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import ratingRoutes from './routes/ratingRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
+import uploadRoutes from './routes/uploadRoutes.js';
 import { requestLogger } from './utils/logger.js';
 import { 
   enhancedErrorHandler, 
@@ -18,6 +21,9 @@ import {
 } from './middleware/errorMiddleware.js';
 
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Set up global error handlers
 handleUnhandledRejection();
@@ -34,6 +40,9 @@ const API_VERSION = process.env.API_VERSION || 'v1';
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Serve static files from uploads directory
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Request logging middleware
 app.use(requestLogger);
@@ -71,6 +80,9 @@ app.use(`/api/${API_VERSION}/ratings`, ratingRoutes);
 
 // Notification routes
 app.use(`/api/${API_VERSION}/notifications`, notificationRoutes);
+
+// Upload routes
+app.use(`/api/${API_VERSION}/upload`, uploadRoutes);
 
 // 404 handler for undefined routes
 app.use(notFoundHandler);
