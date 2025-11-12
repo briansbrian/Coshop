@@ -222,9 +222,14 @@
     - Cache geocoding results in Redis to reduce API calls
     - _Requirements: 5.4_
 
-- [ ] 7. Build order management service
+- [x] 7. Build order management service
 
-  - [ ] 7.1 Create order service module
+
+
+
+  - [x] 7.1 Create order service module
+
+
     - Implement order creation logic with validation
     - Create database queries for order and order_items
     - Implement inventory validation before order creation
@@ -232,7 +237,9 @@
     - Support splitting cart into separate orders per SME
     - _Requirements: 8.1, 8.2_
   
-  - [ ] 7.2 Create order API routes
+  - [x] 7.2 Create order API routes
+
+
     - Implement POST /api/v1/orders endpoint for order creation
     - Implement GET /api/v1/orders/:id endpoint for order details
     - Implement GET /api/v1/orders endpoint for order history (filtered by user)
@@ -240,7 +247,9 @@
     - Restrict status updates to business owners
     - _Requirements: 7.2, 7.3, 7.4, 8.2, 9.4_
   
-  - [ ] 7.3 Implement order status workflow
+
+  - [x] 7.3 Implement order status workflow
+
     - Create status transition validation logic
     - Update product inventory when order is confirmed
     - Trigger notifications on status changes
@@ -277,8 +286,14 @@
     - Implement GET /api/v1/delivery/track/:id endpoint for tracking
     - _Requirements: 8.3, 8.4, 9.3, 9.5_
 
-- [ ] 10. Build rating and review service
-  - [ ] 10.1 Create rating service module
+- [x] 10. Build rating and review service
+
+
+
+
+  - [x] 10.1 Create rating service module
+
+
     - Implement rating creation logic with validation
     - Support consumer-to-SME and SME-to-consumer rating types
     - Store criteria as JSONB (quality, service, value for consumers; payment, communication, compliance for SMEs)
@@ -286,14 +301,18 @@
     - Calculate average ratings and trust scores
     - _Requirements: 11.1, 11.2, 11A.1, 11A.2_
   
-  - [ ] 10.2 Create rating API routes
+  - [x] 10.2 Create rating API routes
+
+
     - Implement POST /api/v1/ratings endpoint for creating ratings
     - Implement GET /api/v1/businesses/:id/ratings endpoint for business ratings
     - Implement GET /api/v1/consumers/:id/trust-score endpoint for consumer trust score
     - Restrict rating creation to order participants
     - _Requirements: 11.1, 11.2, 11.3, 11A.1, 11A.2, 11A.3_
   
-  - [ ] 10.3 Update business and user aggregates
+  - [x] 10.3 Update business and user aggregates
+
+
     - Update business rating and total_ratings on new consumer rating
     - Recalculate consumer trust score on new SME rating
     - Display ratings on business profiles and product listings
@@ -320,15 +339,23 @@
     - Send message notifications within 30 seconds
     - _Requirements: 17.1, 17.2_
 
-- [ ] 12. Build notification service
-  - [ ] 12.1 Create notification service module
+
+- [x] 12. Build notification service
+
+
+
+  - [x] 12.1 Create notification service module
+
+
     - Implement notification creation logic
     - Create database queries for notifications
     - Implement notification type categorization (new_order, message, review, low_inventory, payment, delivery_update)
     - Support priority levels (low, medium, high)
     - _Requirements: 20.1_
   
-  - [ ] 12.2 Create notification API routes
+  - [x] 12.2 Create notification API routes
+
+
     - Implement GET /api/v1/notifications endpoint for notification history
     - Implement PATCH /api/v1/notifications/:id/read endpoint to mark as read
     - Implement GET /api/v1/notifications/unread/count endpoint
@@ -404,15 +431,29 @@
     - Support filtering by type (business/product)
     - _Requirements: 15.1, 15.2, 15.5_
 
-- [ ]* 17. Build frontend web application
-  - [ ] 17.1 Set up API client and state management
+- [-] 17. Build frontend web application
+
+
+
+  - [x] 17.1 Set up API client and state management
+
+
+
+
+
     - Create axios API client with base URL configuration
     - Implement request/response interceptors for JWT tokens
     - Set up Zustand stores for auth, cart, and notifications
     - Create API service modules for each backend service
     - _Requirements: All frontend requirements_
+
   
-  - [ ] 17.2 Implement authentication UI
+  - [x] 17.2 Implement authentication UI
+
+
+
+
+
     - Create registration page with forms for SMEs and consumers
     - Create login page with email/password fields
     - Implement JWT token storage in localStorage

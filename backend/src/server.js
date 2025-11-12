@@ -6,6 +6,9 @@ import authRoutes from './routes/authRoutes.js';
 import businessRoutes from './routes/businessRoutes.js';
 import productRoutes from './routes/productRoutes.js';
 import geolocationRoutes from './routes/geolocationRoutes.js';
+import orderRoutes from './routes/orderRoutes.js';
+import ratingRoutes from './routes/ratingRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
 
 dotenv.config();
 
@@ -45,6 +48,15 @@ app.use(`/api/${API_VERSION}/products`, productRoutes);
 
 // Geolocation routes
 app.use(`/api/${API_VERSION}/geolocation`, geolocationRoutes);
+
+// Order routes
+app.use(`/api/${API_VERSION}/orders`, orderRoutes);
+
+// Rating routes
+app.use(`/api/${API_VERSION}/ratings`, ratingRoutes);
+
+// Notification routes
+app.use(`/api/${API_VERSION}/notifications`, notificationRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

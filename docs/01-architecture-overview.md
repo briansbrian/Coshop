@@ -51,6 +51,10 @@ CoShop is a marketplace platform built with a service-oriented architecture that
 │   - authService                     │
 │   - businessService                 │
 │   - productService                  │
+│   - geolocationService              │
+│   - orderService                    │
+│   - ratingService                   │
+│   - notificationService             │
 └─────────────────────────────────────┘
                  ↓
 ┌─────────────────────────────────────┐
@@ -108,34 +112,37 @@ All errors follow a standardized format with status codes, error codes, and time
 
 ### Current Implementation Status
 
-**✅ Completed (Backend Core):**
-- **Database**: Complete schema with PostGIS extension, spatial indexes, and triggers
-- **Authentication**: User registration (SME/consumer), login, JWT token refresh
-- **JWT Tokens**: Access tokens (15min), refresh tokens (7d), verification middleware
-- **Business Management**: CRUD operations, automatic geocoding, location updates
-- **Product Management**: CRUD operations, inventory tracking, category management
-- **Product Search**: Keyword search, category/price filters, geolocation-based sorting
-- **Geolocation Service**: Nearby business search, distance calculations, map bounds queries
-- **Caching**: Redis integration with TTLs (5min for searches, 24hr for geocoding)
-- **Authorization**: Role-based access control (SME vs consumer), ownership validation
-- **Validation**: Joi schemas for all inputs, coordinate validation, address validation
-- **Error Handling**: Standardized error format, typed exceptions, proper HTTP status codes
-- **Transactions**: Database transactions for multi-step operations
+**✅ Completed (Backend Core - 12 Services, 30 Endpoints):**
+- **Database**: Complete schema with PostGIS extension, spatial indexes, triggers, and generated columns
+- **Authentication Service**: User registration (SME/consumer), login, JWT token refresh with proper expiration
+- **JWT Tokens**: Access tokens (15min), refresh tokens (7d), verification middleware, role-based access
+- **Business Management Service**: Full CRUD operations, automatic geocoding via OpenStreetMap/Google Maps, location updates
+- **Product Management Service**: Full CRUD operations, inventory tracking, category management (15 categories)
+- **Product Search**: Advanced search with keyword, category, price filters, geolocation-based sorting, pagination
+- **Geolocation Service**: Nearby business search (radius-based), distance calculations, map bounds queries
+- **Order Management Service**: Order creation with inventory validation, status workflow (6 states), multi-SME cart splitting, automatic inventory deduction
+- **Rating Service**: Bidirectional ratings (consumer→SME and SME→consumer), trust score calculation, aggregate ratings, duplicate prevention
+- **Notification Service**: In-app notifications with database storage, notification history, read/unread tracking, automatic triggers
+- **Caching**: Redis integration with intelligent TTLs (5min for searches, 24hr for geocoding, 1hr for geolocation)
+- **Authorization**: Role-based access control (SME vs consumer), ownership validation for all modifications
+- **Validation**: Joi schemas for all inputs, coordinate validation, address validation, status transition validation
+- **Error Handling**: Standardized error format with codes, typed exceptions, proper HTTP status codes
+- **Transactions**: Database transactions for multi-step operations (user+business registration, order creation with inventory updates)
+- **PostGIS Queries**: Spatial indexes, ST_DWithin for radius search, ST_Distance for calculations, ST_MakeEnvelope for bounds
 
 **⏳ Not Implemented:**
-- Order management and workflow (pending, confirmed, delivered states)
 - Payment processing integration (Stripe, M-Pesa, PayPal)
 - Delivery service integration (Uber API, Pick Up Mtaani API)
-- Bidirectional rating system (consumer→SME and SME→consumer)
-- Real-time messaging (WebSocket server, conversation threads)
-- Multi-channel notifications (email, SMS, push, in-app)
-- Business analytics and reporting (metrics, trends, exports)
-- File upload service (images for products and businesses)
+- Real-time messaging (WebSocket server, conversation threads, read receipts)
+- Multi-channel notifications (email, SMS, push notifications - only in-app implemented)
+- Business analytics and reporting (metrics, trends, CSV exports)
+- File upload service (images for products and businesses, S3 integration)
 - Frontend web application (only skeleton structure exists)
-- Business verification workflow (document upload and review)
+- Business verification workflow (document upload, admin review, verified badge)
 - Staff account management (role-based permissions for business staff)
-- Promotions and discounts (coupon codes, usage tracking)
+- Promotions and discounts (coupon codes, usage tracking, validity periods)
 - Favorites/wishlist functionality (save businesses and products)
+- Admin moderation system (content flagging, reports, audit logs)
 
 ### API Versioning
 

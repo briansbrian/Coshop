@@ -1,11 +1,17 @@
 # CoShop Marketplace Platform - Documentation
 
+**Platform Status:** 🟡 In Development (~50% Complete for MVP)  
+**Backend Services:** 7 of 15 Implemented | **API Endpoints:** 30 Functional | **Frontend:** Not Implemented
+
 This documentation provides a comprehensive overview of the CoShop Marketplace platform architecture, implementation, and business logic. The documentation is organized hierarchically to help developers quickly locate information for updates, bug fixes, and feature development.
+
+**📊 For a complete status report, see [IMPLEMENTATION-STATUS.md](IMPLEMENTATION-STATUS.md)**
 
 ## Documentation Structure
 
 ### Getting Started
 - **[00-quick-start.md](00-quick-start.md)** - Quick start guide with examples, common tasks, and rapid overview
+- **[IMPLEMENTATION-STATUS.md](IMPLEMENTATION-STATUS.md)** - Comprehensive implementation status, completed features, and roadmap
 
 ### Core Architecture
 - **[01-architecture-overview.md](01-architecture-overview.md)** - System architecture, technology stack, design principles, and implementation status
@@ -13,43 +19,44 @@ This documentation provides a comprehensive overview of the CoShop Marketplace p
 
 ### Data & API
 - **[03-database-schema.md](03-database-schema.md)** - Complete database schema with PostGIS, relationships, and indexes
-- **[04-data-models.md](04-data-models.md)** - Data models and relationships
-- **[05-api-endpoints.md](05-api-endpoints.md)** - Complete API reference with request/response formats and examples (20 endpoints)
+- **[04-api-endpoints.md](04-api-endpoints.md)** - Core API reference (Auth, Business, Product, Geolocation)
+- **[05-authentication-authorization.md](05-authentication-authorization.md)** - JWT authentication, RBAC, and security patterns
+- **[09-order-rating-notification-endpoints.md](09-order-rating-notification-endpoints.md)** - Order, Rating, and Notification API endpoints
 
-### Security & Performance
-- **[06-authentication-authorization.md](06-authentication-authorization.md)** - JWT authentication, RBAC, and security patterns
-- **[07-error-handling.md](07-error-handling.md)** - Error patterns, status codes, and client handling strategies
-- **[08-caching-strategy.md](08-caching-strategy.md)** - Redis caching, invalidation strategies, and performance optimization
-
-### Specialized Topics
-- **[06-geolocation-implementation.md](06-geolocation-implementation.md)** - PostGIS spatial queries, geocoding, and location-based search
+### Performance & Features
+- **[06-caching-strategy.md](06-caching-strategy.md)** - Redis caching, invalidation strategies, and performance optimization
+- **[07-geolocation-implementation.md](07-geolocation-implementation.md)** - PostGIS spatial queries, geocoding, and location-based search
+- **[08-error-handling.md](08-error-handling.md)** - Error patterns, status codes, and client handling strategies
 
 ## Quick Reference
 
 ### Current Implementation Status
 
-**✅ Completed (Backend Core):**
+**📊 See [IMPLEMENTATION-STATUS.md](IMPLEMENTATION-STATUS.md) for comprehensive status report with roadmap.**
+
+**✅ Completed (Backend Core - 7 Services, 30 Endpoints):**
 - **Database**: Complete schema with PostGIS extension, spatial indexes, triggers, and generated columns
-- **Authentication**: User registration (SME/consumer), login, JWT token refresh with proper expiration
+- **Authentication Service**: User registration (SME/consumer), login, JWT token refresh with proper expiration
 - **JWT Tokens**: Access tokens (15min), refresh tokens (7d), verification middleware, role-based access
-- **Business Management**: Full CRUD operations, automatic geocoding via OpenStreetMap/Google Maps, location updates
-- **Product Management**: Full CRUD operations, inventory tracking, category management (15 categories)
+- **Business Management Service**: Full CRUD operations, automatic geocoding via OpenStreetMap/Google Maps, location updates
+- **Product Management Service**: Full CRUD operations, inventory tracking, category management (15 categories)
 - **Product Search**: Advanced search with keyword, category, price filters, geolocation-based sorting, pagination
 - **Geolocation Service**: Nearby business search (radius-based), distance calculations, map bounds queries
+- **Order Management Service**: Order creation with inventory validation, status workflow, multi-SME cart splitting
+- **Rating Service**: Bidirectional ratings (consumer→SME and SME→consumer), trust score calculation, aggregate ratings
+- **Notification Service**: In-app notifications with database storage, notification history, read/unread tracking
 - **Caching**: Redis integration with intelligent TTLs (5min for searches, 24hr for geocoding, 1hr for geolocation)
 - **Authorization**: Role-based access control (SME vs consumer), ownership validation for all modifications
 - **Validation**: Joi schemas for all inputs, coordinate validation, address validation
 - **Error Handling**: Standardized error format with codes, typed exceptions, proper HTTP status codes
-- **Transactions**: Database transactions for multi-step operations (user+business registration)
+- **Transactions**: Database transactions for multi-step operations (user+business registration, order creation)
 - **PostGIS Queries**: Spatial indexes, ST_DWithin for radius search, ST_Distance for calculations, ST_MakeEnvelope for bounds
 
 **⏳ Not Implemented:**
-- Order management and workflow (pending, confirmed, delivered states)
 - Payment processing integration (Stripe, M-Pesa, PayPal)
 - Delivery service integration (Uber API, Pick Up Mtaani API)
-- Bidirectional rating system (consumer→SME and SME→consumer with trust scores)
 - Real-time messaging (WebSocket server, conversation threads, read receipts)
-- Multi-channel notifications (email, SMS, push, in-app with preferences)
+- Multi-channel notifications (email, SMS, push notifications - only in-app implemented)
 - Business analytics and reporting (metrics, trends, CSV exports)
 - File upload service (images for products and businesses, S3 integration)
 - Frontend web application (only skeleton structure exists)
@@ -57,8 +64,7 @@ This documentation provides a comprehensive overview of the CoShop Marketplace p
 - Staff account management (role-based permissions for business staff)
 - Promotions and discounts (coupon codes, usage tracking, validity periods)
 - Favorites/wishlist functionality (save businesses and products)
-- Business verification workflow
-- Staff account management
+- Admin moderation system (content flagging, reports, audit logs)
 
 ### Technology Stack
 
@@ -124,13 +130,15 @@ http://localhost:5000/api/v1
 ## Navigation Tips
 
 - **New to the project?** Start with `00-quick-start.md` for rapid overview and examples
-- **For bug fixes:** Check `07-error-handling.md` for error patterns, then relevant service in `02-service-structure.md`
+- **For bug fixes:** Check `08-error-handling.md` for error patterns, then relevant service in `02-service-structure.md`
 - **For new features:** Review `01-architecture-overview.md` and `03-database-schema.md` first
-- **For API integration:** See `05-api-endpoints.md` for all 20 implemented endpoints with examples
-- **For authentication issues:** See `06-authentication-authorization.md` for JWT and RBAC
-- **For geolocation features:** See `06-geolocation-implementation.md` for PostGIS spatial queries
-- **For performance optimization:** See `08-caching-strategy.md` for Redis strategy
+- **For API integration:** See `04-api-endpoints.md` for core endpoints and `09-order-rating-notification-endpoints.md` for order/rating/notification endpoints
+- **For authentication issues:** See `05-authentication-authorization.md` for JWT and RBAC
+- **For geolocation features:** See `07-geolocation-implementation.md` for PostGIS spatial queries
+- **For performance optimization:** See `06-caching-strategy.md` for Redis strategy
 - **For database queries:** See `03-database-schema.md` for complete schema and relationships
+- **For order workflow:** See `09-order-rating-notification-endpoints.md` for order status transitions and inventory management
+- **For rating system:** See `09-order-rating-notification-endpoints.md` for bidirectional ratings and trust scores
 
 ## Document Conventions
 
@@ -202,6 +210,39 @@ http://localhost:5000/api/v1
 - Redis caching (24hr TTL) to reduce API calls
 - Coordinate validation (-90 to 90 lat, -180 to 180 lon)
 
+**Order Management:**
+- Order creation with inventory validation
+- Multi-vendor cart splitting (separate orders per SME)
+- Six-state order workflow (pending → confirmed → ready → out_for_delivery → delivered, with cancellation)
+- Status transition validation
+- Automatic inventory deduction on confirmation
+- Inventory restoration on cancellation
+- Order history for consumers and SMEs
+- Order details with items and business information
+- Database transactions for atomicity
+- Automatic notifications on order events
+
+**Rating System:**
+- Bidirectional ratings (consumer→SME and SME→consumer)
+- Consumer ratings with criteria (productQuality, service, value)
+- SME ratings with criteria (paymentTimeliness, communication, compliance)
+- Duplicate rating prevention per order
+- Aggregate rating calculation for businesses
+- Consumer trust score calculation
+- JSONB storage for flexible criteria
+- Order completion validation before rating
+- Public business ratings display
+
+**Notification System:**
+- In-app notification storage in database
+- Read/unread tracking
+- Notification history with pagination
+- Filtering by type and read status
+- Unread count endpoint
+- Automatic triggers (new orders, status changes)
+- Priority levels (low, medium, high)
+- Multiple notification types support
+
 **Data Validation:**
 - Joi schemas for all service inputs
 - Email format validation
@@ -211,6 +252,8 @@ http://localhost:5000/api/v1
 - Price and quantity validation
 - Coordinate range validation
 - Address component validation
+- Order status transition validation
+- Rating criteria validation
 
 **Error Handling:**
 - Standardized error response format
@@ -229,6 +272,7 @@ http://localhost:5000/api/v1
 - Triggers for updated_at timestamps
 - Cascading deletes for referential integrity
 - Database transactions for atomic operations
+- JSONB columns for flexible data (rating criteria)
 
 **Caching Strategy:**
 - Redis integration for performance optimization
@@ -268,7 +312,24 @@ http://localhost:5000/api/v1
 - GET /api/v1/geolocation/geocode - Address to coordinates (public)
 - GET /api/v1/geolocation/reverse-geocode - Coordinates to address (public)
 
-**Total: 20 implemented endpoints**
+**Order (3 endpoints):**
+- POST /api/v1/orders - Create order (consumer only)
+- GET /api/v1/orders/:id - Get order details (owner/consumer)
+- GET /api/v1/orders - List user orders (authenticated)
+- PATCH /api/v1/orders/:id/status - Update order status (business owner)
+
+**Rating (4 endpoints):**
+- POST /api/v1/ratings/consumer - Consumer rates SME (consumer only)
+- POST /api/v1/ratings/sme - SME rates consumer (SME only)
+- GET /api/v1/ratings/business/:id - Get business ratings (public)
+- GET /api/v1/ratings/consumer/:id/trust-score - Get consumer trust score (SME only)
+
+**Notification (3 endpoints):**
+- GET /api/v1/notifications - Get user notifications (authenticated)
+- PATCH /api/v1/notifications/:id/read - Mark notification as read (authenticated)
+- GET /api/v1/notifications/unread/count - Get unread count (authenticated)
+
+**Total: 30 implemented endpoints**
 
 ## Environment Variables
 

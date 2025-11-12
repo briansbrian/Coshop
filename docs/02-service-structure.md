@@ -439,14 +439,219 @@ geolocationService
   └── joi (validation)
 ```
 
+### 5. Order Service (`orderService.js`)
+
+**Purpose:** Manages order creation, processing, status workflow, and inventory updates.
+
+**Key Functions:**
+- `createOrder(consumerId, orderData)` - Creates order(s) with inventory validation and cart splitting
+- `getOrderById(orderId, userId)` - Retrieves order details with items
+- `getOrdersByUser(userId, userType, filters)` - Lists orders for consumer or SME
+- `updateOrderStatus(orderId, businessOwnerId, statusData)` - Updates order status with workflow validation
+
+**Validation Schemas:**
+- `orderCreateSchema` - Validates items array and delivery method
+- `orderItemSchema` - Validates productId and quantity
+- `orderStatusUpdateSchema` - Validates status transitions
+
+**Order Workflow:**
+Six status states with validated transitions:
+1. `pending` → can transition to `confirmed` or `cancelled`
+2. `confirmed` → can transition to `ready` or `cancelled`
+3. `ready` → can transition to `out_for_delivery`, `delivered`, or `cancelled`
+4. `out_for_delivery` → can transition to `delivered` or `cancelled`
+5. `delivered` → terminal state (no transitions)
+6. `cancelled` → terminal state (no transitions)
+
+**Business Logic:**
+- Validates product availability and inventory before order creation
+- Splits shopping cart into separate orders per SME (multi-vendor support)
+- Calculates total amount for each order
+- Deducts inventory automatically when order status changes to `confirmed`
+- Restores inventory if order is cancelled from `confirmed` state
+- Prevents invalid status transitions
+- Triggers notifications on order creation and status changes
+- Verifies user access (consumer can view their orders, SME can view orders for their businesses)
+
+**Inventory Management:**
+- Checks product `in_stock` status before order creation
+- Validates sufficient quantity available
+- Atomic inventory deduction using database transactions
+- Automatic inventory restoration on cancellation
+- Prevents order confirmation if inventory insufficient
+
+**Multi-SME Cart Splitting:**
+- Groups cart items by business_id
+- Creates separate order for each business
+- Each order has independent status tracking
+- Maintains referential integrity with order_items
+
+**Notification Integration:**
+- Notifies business owner when new order is created
+- Notifies consumer when order status changes
+- Uses `notificationUtils` for automatic notification creation
+
+**Error Handling:**
+- 400: Validation errors, insufficient inventory, invalid status transition
+- 403: Not authorized to view/modify order
+- 404: Order, consumer, or product not found
+
+### 6. Rating Service (`ratingService.js`)
+
+**Purpose:** Manages bidirectional rating system where consumers rate SMEs and SMEs rate consumers.
+
+**Key Functions:**
+- `createConsumerRating(consumerId, ratingData)` - Consumer rates SME after order completion
+- `createSMERating(smeOwnerId, ratingData)` - SME rates consumer's transaction behavior
+- `getBusinessRatings(businessId, filters)` - Retrieves all consumer ratings for a business
+- `getConsumerTrustScore(consumerId)` - Calculates consumer's trust score from SME ratings
+
+**Validation Schemas:**
+- `consumerRatingSchema` - Validates orderId, businessId, stars (1-5), review, criteria (productQuality, service, value)
+- `smeRatingSchema` - Validates orderId, consumerId, stars (1-5), feedback, criteria (paymentTimeliness, communication, compliance)
+
+**Rating Types:**
+1. **Consumer-to-SME (`consumer_to_sme`):**
+   - Rates product quality, service, and value
+   - Updates business aggregate rating and total_ratings
+   - Displayed on business profiles
+   
+2. **SME-to-Consumer (`sme_to_consumer`):**
+   - Rates payment timeliness, communication, and compliance
+   - Contributes to consumer trust score
+   - Visible to other SMEs when processing orders
+
+**Business Logic:**
+- Verifies order exists and is completed/delivered before allowing rating
+- Prevents duplicate ratings for same order
+- Validates rater is participant in the order (consumer or business owner)
+- Stores criteria as JSONB for flexible rating dimensions
+- Automatically updates aggregate ratings after new rating created
+
+**Trust Score Calculation:**
+- Averages all SME ratings for a consumer
+- Calculates breakdown by criteria (payment, communication, compliance)
+- Returns 0 score if consumer has no ratings
+- Helps SMEs identify trustworthy customers
+
+**Aggregate Rating Updates:**
+- `updateBusinessRatings()` - Recalculates business average rating and total count
+- `updateConsumerTrustScore()` - Placeholder for future caching (currently calculated on-demand)
+
+**Duplicate Prevention:**
+- Checks for existing rating with same order_id, rater_id, and rating_type
+- Returns 409 Conflict if duplicate found
+
+**Error Handling:**
+- 400: Validation errors, order not completed, invalid business/consumer
+- 403: Not authorized to rate (not order participant)
+- 404: Order not found
+- 409: Duplicate rating
+
+### 7. Notification Service (`notificationService.js`)
+
+**Purpose:** Manages in-app notifications with database storage and read/unread tracking.
+
+**Key Functions:**
+- `createNotification(userId, notificationData)` - Creates new notification
+- `getUserNotifications(userId, filters)` - Retrieves user's notification history
+- `markNotificationAsRead(notificationId, userId)` - Marks notification as read
+- `getUnreadCount(userId)` - Gets count of unread notifications
+
+**Validation Schemas:**
+- `notificationCreateSchema` - Validates type, title, message, priority
+- `notificationFiltersSchema` - Validates read status, type, limit, offset
+
+**Notification Types:**
+- `new_order` - Business owner receives notification when order is placed
+- `order_status_change` - Consumer receives notification when order status updates
+- `message` - User receives notification for new messages (future)
+- `review` - User receives notification for new reviews (future)
+- `low_inventory` - Business owner notified when product stock is low (future)
+- `payment` - Payment-related notifications (future)
+- `delivery_update` - Delivery status updates (future)
+
+**Priority Levels:**
+- `low` - Non-urgent notifications (batched)
+- `medium` - Standard notifications
+- `high` - Urgent notifications (new orders, payment issues)
+
+**Business Logic:**
+- Stores notifications in database for persistence
+- Tracks read/unread status per notification
+- Supports filtering by type and read status
+- Provides pagination for notification history
+- Validates user ownership before marking as read
+
+**Notification Utilities (`notificationUtils.js`):**
+- `notifyNewOrder(businessOwnerId, consumerEmail, totalAmount)` - Auto-creates notification when order placed
+- `notifyOrderStatusChange(orderId, consumerId, businessName, newStatus)` - Auto-creates notification on status change
+
+**Current Implementation:**
+- In-app notifications only (stored in database)
+- Automatic triggers from order service
+- Read/unread tracking
+- Notification history with pagination
+
+**Not Yet Implemented:**
+- Email notifications
+- SMS notifications
+- Push notifications
+- Notification preferences management
+- Batching of non-urgent notifications
+- WebSocket real-time delivery
+
+**Error Handling:**
+- 400: Validation errors
+- 403: Not authorized to access notification
+- 404: Notification not found
+
+## Service Dependencies (Updated)
+
+```
+authService
+  ├── jwtUtils (token generation)
+  ├── pool (database)
+  └── bcrypt (password hashing)
+
+businessService
+  ├── pool (database)
+  ├── geocodingUtils (address conversion)
+  └── joi (validation)
+
+productService
+  ├── pool (database)
+  ├── cacheUtils (search caching)
+  └── joi (validation)
+
+geolocationService
+  ├── pool (database)
+  ├── cacheUtils (result caching)
+  ├── geocodingUtils (coordinate validation)
+  └── joi (validation)
+
+orderService
+  ├── pool (database)
+  ├── notificationUtils (order notifications)
+  └── joi (validation)
+
+ratingService
+  ├── pool (database)
+  └── joi (validation)
+
+notificationService
+  ├── pool (database)
+  └── joi (validation)
+```
+
 ## Not Yet Implemented
 
 Services planned but not yet built:
-- Order Service (order creation, status management, workflow)
 - Payment Service (Stripe/M-Pesa integration, transaction tracking)
 - Delivery Service (Uber/Pick Up Mtaani API integration)
-- Rating Service (bidirectional reviews, trust scores)
-- Messaging Service (WebSocket, conversation threads)
-- Notification Service (multi-channel delivery, preferences)
-- Analytics Service (metrics aggregation, reporting, exports)
+- Messaging Service (WebSocket, conversation threads, read receipts)
+- Analytics Service (metrics aggregation, reporting, CSV exports)
 - File Upload Service (image storage, S3 integration)
+- Admin Moderation Service (content flagging, reports, audit logs)
+- Promotions Service (discount codes, usage tracking, validity periods)
+- Favorites Service (wishlist functionality)
