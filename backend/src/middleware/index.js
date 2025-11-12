@@ -12,3 +12,11 @@ export {
   requireBusinessOwnership,
   requireRoleOrOwnership
 } from './rbacMiddleware.js';
+export {
+  errorHandler,
+  enhancedErrorHandler,
+  notFoundHandler,
+  asyncHandler,
+  handleUnhandledRejection,
+  handleUncaughtException
+} from './errorMiddleware.js';

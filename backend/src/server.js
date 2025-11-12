@@ -9,8 +9,19 @@ import geolocationRoutes from './routes/geolocationRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import ratingRoutes from './routes/ratingRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
+import { requestLogger } from './utils/logger.js';
+import { 
+  enhancedErrorHandler, 
+  notFoundHandler,
+  handleUnhandledRejection,
+  handleUncaughtException
+} from './middleware/errorMiddleware.js';
 
 dotenv.config();
+
+// Set up global error handlers
+handleUnhandledRejection();
+handleUncaughtException();
 
 const app = express();
 
@@ -23,6 +34,9 @@ const API_VERSION = process.env.API_VERSION || 'v1';
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Request logging middleware
+app.use(requestLogger);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -58,17 +72,11 @@ app.use(`/api/${API_VERSION}/ratings`, ratingRoutes);
 // Notification routes
 app.use(`/api/${API_VERSION}/notifications`, notificationRoutes);
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(err.status || 500).json({
-    error: {
-      code: err.code || 'INTERNAL_SERVER_ERROR',
-      message: err.message || 'An unexpected error occurred',
-      timestamp: new Date().toISOString()
-    }
-  });
-});
+// 404 handler for undefined routes
+app.use(notFoundHandler);
+
+// Enhanced error handling middleware
+app.use(enhancedErrorHandler);
 
 app.listen(PORT, () => {
   console.log(`CoShop Backend API running on port ${PORT}`);

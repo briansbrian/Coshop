@@ -21,10 +21,31 @@ const notificationService = {
 
   /**
    * Mark all notifications as read
+   * Note: If backend doesn't support bulk operation, falls back to individual marking
    */
   markAllAsRead: async () => {
-    const response = await apiClient.patch('/notifications/read-all');
-    return response.data;
+    try {
+      const response = await apiClient.patch('/notifications/read-all');
+      return response.data;
+    } catch (error) {
+      // Fallback: If endpoint doesn't exist, mark individually
+      if (error.response?.status === 404) {
+        const notificationsResponse = await apiClient.get('/notifications', {
+          params: { read: false }
+        });
+        const unreadNotifications = notificationsResponse.data.notifications || [];
+        
+        // Mark each unread notification as read
+        await Promise.all(
+          unreadNotifications.map(notification => 
+            apiClient.patch(`/notifications/${notification.id}/read`)
+          )
+        );
+        
+        return { message: 'All notifications marked as read' };
+      }
+      throw error;
+    }
   },
 
   /**

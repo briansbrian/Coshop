@@ -461,14 +461,24 @@
     - Add logout functionality
     - _Requirements: 1.1, 1.2_
   
-  - [ ] 17.3 Implement homepage and navigation
+  - [x] 17.3 Implement homepage and navigation
+
+
+
+
+
     - Create navigation bar with logo, search, and user menu
     - Create homepage with hero section and search bar
     - Implement responsive navigation for mobile
     - Add links to map, products, orders, messages
     - _Requirements: 4.1, 19.1_
   
-  - [ ] 17.4 Implement interactive map page
+  - [x] 17.4 Implement interactive map page
+
+
+
+
+
     - Integrate Leaflet with React-Leaflet
     - Request user location permission
     - Display business markers on map with custom icons by type
@@ -476,44 +486,79 @@
     - Add map filters for business type, distance, ratings
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
   
-  - [ ] 17.5 Implement product search and browse
+  - [x] 17.5 Implement product search and browse
+
+
+
+
+
     - Create product search page with filters (category, price, location)
     - Display search results in grid layout with images and prices
     - Implement sorting by price, distance, ratings
     - Create product detail page with full information
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
   
-  - [ ] 17.6 Implement business profile pages
+  - [x] 17.6 Implement business profile pages
+
+
+
+
+
     - Create business profile page layout
     - Display business info, photos, operating hours, location
     - Show product listings from the business
     - Display ratings and reviews section
     - Add contact and directions buttons
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
-  
-  - [ ] 17.7 Implement shopping cart and checkout
+
+  -
+
+  - [x] 17.7 Implement shopping cart and checkout
+
+
+
+
+
+
+
+
     - Create cart store with add/remove/update quantity actions
     - Create cart page showing items grouped by business
     - Implement basic checkout flow with delivery method selection
     - Show order confirmation page (payment integration optional for MVP)
     - _Requirements: 8.1, 8.2, 8.5_
   
-  - [ ] 17.8 Implement order management for consumers
+
+
+  - [x] 17.8 Implement order management for consumers
+
+
+
     - Create order history page for consumers
     - Display order cards with status and items
     - Show order details page with status tracking
     - Add rating prompt after order completion
     - _Requirements: 9.1, 9.4, 11.1_
   
-  - [ ] 17.9 Implement SME dashboard
+
+  - [x] 17.9 Implement SME dashboard
+
+
+
+
     - Create SME dashboard layout with sidebar navigation
     - Build business profile management page
     - Create product inventory management page (add/edit/delete products)
     - Implement order management page for SMEs
     - Show incoming orders with accept/reject actions
     - _Requirements: 2.1, 5.1, 7.2, 7.4_
+
   
-  - [ ] 17.10 Implement rating and review UI
+
+  - [x] 17.10 Implement rating and review UI
+
+
+
     - Create rating form modal for consumers (stars + review text)
     - Create rating form for SMEs to rate consumers
     - Display ratings list on business profiles
@@ -526,15 +571,25 @@
     - Implement WebSocket connection for real-time messages
     - Show unread message indicators
     - _Requirements: 17.1, 17.2, 17.3_
-  
-  - [ ] 17.12 Implement notification center
+  -
+
+  - [x] 17.12 Implement notification center
+
+
+
+
     - Create notification dropdown in navigation bar
     - Display notification list with icons by type
     - Implement mark as read functionality
     - Show unread count badge
     - _Requirements: 20.1, 20.5_
   
-  - [ ] 17.13 Implement mobile responsive design
+
+  - [x] 17.13 Implement mobile responsive design
+
+
+
+
     - Apply Tailwind responsive classes throughout
     - Test and optimize map navigation on mobile
     - Ensure touch-friendly buttons and forms
@@ -542,7 +597,9 @@
     - Test on various screen sizes
     - _Requirements: 19.1, 19.2, 19.3, 19.4, 19.5_
 
-- [ ] 18. Implement file upload and storage
+- [-] 18. Implement file upload and storage
+
+
   - [ ] 18.1 Create file upload utility
     - Implement multer middleware for file uploads
     - Validate file types (images only) and sizes (max 5MB)
@@ -577,14 +634,23 @@
     - Implement cache invalidation on data updates
     - _Requirements: Performance optimization for 2.2, 4.2, 5.2_
 
-- [ ] 20. Implement error handling and logging
-  - [ ] 20.1 Create error handling utilities
+- [x] 20. Implement error handling and logging
+
+
+
+
+
+  - [x] 20.1 Create error handling utilities
+
+
     - Create custom error classes (ValidationError, AuthError, NotFoundError)
     - Implement standardized error response format
     - Create error handling middleware
     - _Requirements: All requirements need proper error handling_
   
-  - [ ] 20.2 Implement logging system
+  - [x] 20.2 Implement logging system
+
+
     - Set up console logging for development
     - Log all API requests with method, path, status code
     - Log errors with stack traces
